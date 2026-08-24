@@ -59,3 +59,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Relatórios gerados pela migração
+relatorio-migracao.txt
+relatorio-migracao.csv

@@ -115,6 +115,7 @@ PROCEDURE Main( cDir )
    ?
 
    nFalhas += TestaLeituraDupla( cDir )
+   nFalhas += TestaMem( cDir )
 
    ? "== 4. resultado =="
    ? "   arquivos conferidos ..: " + hb_ntos( nOk ) + "/" + hb_ntos( Len( aRef ) )
@@ -123,6 +124,29 @@ PROCEDURE Main( cDir )
 
    ErrorLevel( iif( nFalhas == 0, 0, 1 ) )
    RETURN
+
+/* CVMGRUPO.MEM — sequencial do grupo de consórcio (08 §6.4). */
+STATIC FUNCTION TestaMem( cDir )
+
+   LOCAL hRes, nFalhas := 0
+
+   ? "== 3b. CVMGRUPO.MEM =="
+   hRes := ExtratorLerMem( cDir + hb_ps() + "CVMGRUPO.MEM", "MCODGRU" )
+   IF hRes[ "erro" ] != NIL
+      ? "   FALHA: " + hRes[ "erro" ]
+      nFalhas++
+   ELSE
+      ? "   MCODGRU .................: " + hb_ValToExp( hRes[ "valor" ] )
+      IF ValType( hRes[ "valor" ] ) == "N"
+         ? "      OK — numérico, pronto para a tabela sequencia"
+      ELSE
+         ? "      FALHA — esperado numérico"
+         nFalhas++
+      ENDIF
+   ENDIF
+   ?
+
+   RETURN nFalhas
 
 /*
  * Os dois casos do acervo em que o valor tipado do RDD perde informação.

@@ -238,3 +238,45 @@ STATIC FUNCTION ExtLerRegistroBruto( cCaminho, hTab, nRec )
       RETURN NIL
    ENDIF
    RETURN cBuf
+
+/*
+ * Lê uma variável de um arquivo .MEM do Clipper.
+ *
+ * Usado por CVMGRUPO.MEM → tabela `sequencia` (docs/08-MIGRACAO-DADOS.md §6.4),
+ * que guarda o sequencial do grupo de consórcio.
+ *
+ * Mesma armadilha de caixa dos .DBT: o Harbour resolve o nome do arquivo pelo
+ * SET FILECASE, e o acervo está em MAIÚSCULAS. Salvo e restaurado, como em
+ * ExtratorLer().
+ *
+ * Devolve um hash { "valor" =>, "erro" => } — "valor" NIL se não houver.
+ */
+FUNCTION ExtratorLerMem( cCaminho, cVariavel )
+
+   LOCAL hRes := { "valor" => NIL, "erro" => NIL }
+   LOCAL nCaseAnt, nDirAnt, nRc
+
+   IF !hb_vfExists( cCaminho )
+      hRes[ "erro" ] := "arquivo inexistente"
+      RETURN hRes
+   ENDIF
+
+   nCaseAnt := Set( _SET_FILECASE, HB_SET_CASE_UPPER )
+   nDirAnt  := Set( _SET_DIRCASE, HB_SET_CASE_MIXED )
+   nRc := __mvRestore( cCaminho, .T. )        // .T. = additive
+   Set( _SET_FILECASE, nCaseAnt )
+   Set( _SET_DIRCASE, nDirAnt )
+
+   IF nRc != 0
+      hRes[ "erro" ] := "falha ao restaurar o .MEM (código " + hb_ntos( nRc ) + ")"
+      RETURN hRes
+   ENDIF
+
+   IF !__mvExist( cVariavel )
+      hRes[ "erro" ] := "variável " + cVariavel + " não encontrada no .MEM"
+      RETURN hRes
+   ENDIF
+
+   hRes[ "valor" ] := __mvGet( cVariavel )
+
+   RETURN hRes

@@ -18,6 +18,10 @@
 #require "hbsqlit3"
 #include "hbsqlit3.ch"
 
+/* Última mensagem de erro capturada ANTES do finalize (ver SqlExecBind).
+   STATIC de módulo precisa vir antes de qualquer função. */
+STATIC s_cUltimoErro := ""
+
 /* Abre (criando se preciso) e aplica os PRAGMAs que não são persistentes. */
 FUNCTION SqlAbrir( cArquivo, lCriar )
 
@@ -37,9 +41,19 @@ FUNCTION SqlAbrir( cArquivo, lCriar )
    RETURN pDb
 
 FUNCTION SqlExec( pDb, cSql )
-   RETURN sqlite3_exec( pDb, cSql )
+   LOCAL nRc := sqlite3_exec( pDb, cSql )
+   s_cUltimoErro := iif( nRc == 0, "", sqlite3_errmsg( pDb ) )
+   RETURN nRc
 
+/*
+ * Depois de sqlite3_finalize() a mensagem do erro se perde — sqlite3_errmsg()
+ * passa a devolver "not an error", que não ajuda ninguém a depurar. Por isso
+ * SqlExecBind captura a mensagem antes de finalizar, e é ela que sai aqui.
+ */
 FUNCTION SqlErro( pDb )
+   IF !Empty( s_cUltimoErro )
+      RETURN s_cUltimoErro
+   ENDIF
    RETURN sqlite3_errmsg( pDb )
 
 /*
@@ -55,6 +69,7 @@ FUNCTION SqlExecBind( pDb, cSql, aValores )
 
    pStmt := sqlite3_prepare( pDb, cSql )
    IF pStmt == NIL
+      s_cUltimoErro := "falha ao preparar: " + sqlite3_errmsg( pDb )
       RETURN -1
    ENDIF
 
@@ -77,9 +92,15 @@ FUNCTION SqlExecBind( pDb, cSql, aValores )
    NEXT
 
    nRc := sqlite3_step( pStmt )
+   IF nRc == SQLITE_DONE .OR. nRc == SQLITE_ROW
+      s_cUltimoErro := ""
+      nRc := SQLITE_OK
+   ELSE
+      s_cUltimoErro := sqlite3_errmsg( pDb )    /* antes do finalize */
+   ENDIF
    sqlite3_finalize( pStmt )
 
-   RETURN iif( nRc == SQLITE_DONE .OR. nRc == SQLITE_ROW, SQLITE_OK, nRc )
+   RETURN nRc
 
 /* Primeira coluna da primeira linha; NIL se não houver linha. */
 FUNCTION SqlEscalar( pDb, cSql )
