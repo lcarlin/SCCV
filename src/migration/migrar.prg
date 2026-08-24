@@ -164,16 +164,22 @@ STATIC PROCEDURE Resumo( hRes, hReg, cDirSaida )
    RETURN
 
 /*
- * Verificação estrutural. A verificação completa — contagens, somas de
- * controle e comparação campo a campo — é a FASE E (verificador.prg).
+ * FASE E — verificação completa (docs/08-MIGRACAO-DADOS.md §9).
+ * Precisa do legado, não só do banco: as somas de controle são calculadas a
+ * partir dos bytes originais, para serem independentes do código da migração.
  */
 STATIC FUNCTION Verificar( hOpc )
 
-   LOCAL pDb, xInteg, aFk, nSaida := SAIDA_OK
+   LOCAL pDb, hV, lOk
 
    IF !hb_vfExists( hOpc[ "destino" ] )
       Msg( "destino inexistente: " + hOpc[ "destino" ] )
       RETURN SAIDA_USO
+   ENDIF
+   IF !hb_vfDirExists( hOpc[ "origem" ] )
+      Msg( "origem inválida: " + hOpc[ "origem" ] + " — a verificação compara " + ;
+           "o banco com os arquivos originais" )
+      RETURN SAIDA_ORIGEM
    ENDIF
 
    pDb := SqlAbrir( hOpc[ "destino" ], .F. )
@@ -182,26 +188,12 @@ STATIC FUNCTION Verificar( hOpc )
       RETURN SAIDA_VERIFICACAO
    ENDIF
 
-   xInteg := SqlEscalar( pDb, "PRAGMA integrity_check" )
-   Msg( "integrity_check ....: " + hb_ValToExp( xInteg ) )
-   IF !( xInteg == "ok" )
-      nSaida := SAIDA_VERIFICACAO
-   ENDIF
-
-   aFk := SqlLinhas( pDb, "PRAGMA foreign_key_check" )
-   Msg( "foreign_key_check ..: " + iif( Len( aFk ) == 0, "vazio", ;
-        hb_ntos( Len( aFk ) ) + " violação(ões)" ) )
-   IF Len( aFk ) > 0
-      nSaida := SAIDA_VERIFICACAO
-   ENDIF
-
-   Msg( "foreign_keys ON ....: " + hb_ValToExp( SqlEscalar( pDb, "PRAGMA foreign_keys" ) ) )
-   Msg( "user_version .......: " + hb_ValToExp( SqlEscalar( pDb, "PRAGMA user_version" ) ) )
-   Msg( "execução ...........: " + hb_ValToExp( SqlEscalar( pDb, ;
-        "SELECT status FROM migracao_execucao ORDER BY id DESC LIMIT 1" ) ) )
+   Msg( "verificando " + hOpc[ "destino" ] + " contra " + hOpc[ "origem" ] )
+   hV  := VerificarTudo( pDb, hOpc[ "origem" ] )
+   lOk := VerificarImprimir( hV )
    pDb := NIL
 
-   RETURN nSaida
+   RETURN iif( lOk, SAIDA_OK, SAIDA_VERIFICACAO )
 
 /* Regera os relatórios a partir da tabela, sem reexecutar a migração. */
 STATIC FUNCTION Relatorio( hOpc )

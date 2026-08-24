@@ -15,9 +15,10 @@ DESTINO   ?= sccv.db
 
 MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
              src/migration/normalizador.prg src/migration/inconsistencia.prg \
-             src/database/sql.prg
+             src/migration/verificador.prg src/database/sql.prg
 
-TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao
+TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao \
+             testa_verificacao
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda
 
@@ -38,7 +39,7 @@ migrate-forcar: $(BIN)/sccv-migrar
 	$(BIN)/sccv-migrar --origem $(ORIGEM) --destino $(DESTINO) --forcar
 
 verificar: $(BIN)/sccv-migrar
-	$(BIN)/sccv-migrar --verificar --destino $(DESTINO)
+	$(BIN)/sccv-migrar --verificar --origem $(ORIGEM) --destino $(DESTINO)
 
 relatorio: $(BIN)/sccv-migrar
 	$(BIN)/sccv-migrar --relatorio --destino $(DESTINO)
@@ -63,6 +64,9 @@ $(BIN)/testa_inconsistencia: tests/migration/testa_inconsistencia.prg \
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_migracao: tests/migration/testa_migracao.prg $(MIG_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+$(BIN)/testa_verificacao: tests/migration/testa_verificacao.prg $(MIG_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # --- utilidades -------------------------------------------------------
