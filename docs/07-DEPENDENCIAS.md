@@ -316,4 +316,36 @@ Verificado de dentro do Harbour em 2026-08-24 (fecha RI-02 e RI-02b):
 | `CVBCLIEN.DBF` via RDD `DBFNTX`, `SET DELETED OFF` | 12 campos, 22 registros, 0 excluídos |
 | `hb_Translate( cValor, "PT860", "UTF8" )` | byte `0xA7` em `CVBCLIEN.ENDCLI` → `º` (`Nº12`) — CP860 confirmado |
 
-O `Makefile` deverá conter um alvo `make check-deps` que verifique cada uma e emita instruções de instalação (compilar o Harbour do fonte — ver §6 — e `apt install libsqlite3-dev`).
+O `Makefile` contém o alvo `make check-deps`, que confere cada dependência e
+imprime o que está em uso.
+
+### Build de referência (FASE F.7, briefing §27)
+
+Ambiente em que o sistema foi compilado e os testes passam:
+
+| Item | Versão |
+|---|---|
+| Harbour | 3.2.1dev (r2608161531), compilado do fonte em `/opt/harbour` |
+| Compilador C | GNU C 15.2 (Ubuntu 15.2.0-16ubuntu1), 64-bit |
+| SQLite (biblioteca e `hbsqlit3`) | 3.46.1 |
+| SQLite (CLI, ferramentas) | 3.46.1 |
+| GNU Make | 4.4.1 |
+| Sistema | Ubuntu 26.04 LTS, Linux x86_64 |
+| PCode do Harbour | 0.3 |
+
+Flags de compilação, definidas no `Makefile`:
+
+```make
+HB_INC  := -I/opt/harbour/contrib/hbsqlit3   # o .ch do hbsqlit3 não está no
+                                             # include path padrão
+HB_LIBS := -lhbsqlit3 -lsqlite3
+HBFLAGS := $(HB_INC) $(HB_LIBS) -gtcgi
+```
+
+`-gtcgi` seleciona o terminal sem controle de tela: a migração e os testes são
+programas de linha de comando, e o GT padrão emitiria sequências de
+posicionamento no meio da saída. A FASE G, que tem telas, usará outro GT.
+
+Alvos disponíveis: `all` · `run` · `migrate` · `migrate-forcar` · `verificar` ·
+`relatorio` · `test` · `install` · `desinstalar` · `clean` · `check-deps` ·
+`ajuda`.

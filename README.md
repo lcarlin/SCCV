@@ -10,12 +10,15 @@ em CA-Clipper Summer '87 / DOS (1994), para **Harbour + SQLite + Linux**.
 | A — Descoberta | ✅ concluída |
 | B — Documentação | ✅ concluída — 12 documentos em [`docs/`](docs/) |
 | **C — Modelo de dados** | ✅ concluída — [`database/`](database/) |
-| **D — Migração DBF → SQLite** | 🔄 em andamento |
-| E — Testes de migração | não iniciada |
-| F — Infraestrutura Harbour | não iniciada |
-| G–J — Implementação, validações, regressão, auditoria | não iniciadas |
+| **D — Migração DBF → SQLite** | ✅ concluída — `make migrate` · 222 registros |
+| **E — Testes de migração** | ✅ concluída — 892 campos, 0 divergências |
+| **F — Infraestrutura Harbour** | ✅ concluída — `bin/sccv` sobe e se apresenta |
+| **G — Implementação dos módulos** | próxima — 0 de 68 |
+| H–J — Validações, regressão, auditoria | não iniciadas |
 
-**0 de 68 funcionalidades implementadas.** Nenhuma linha da aplicação escrita.
+**0 de 68 funcionalidades implementadas.** A migração está pronta e verificada —
+185 registros lidos, 222 gravados, 892 campos conferidos um a um sem divergência,
+140 inconsistências documentadas. A aplicação em si ainda não foi escrita.
 Ver a auditoria completa em [`docs/10-PLANO-IMPLEMENTACAO.md`](docs/10-PLANO-IMPLEMENTACAO.md) §6.
 
 > Este README será substituído pelo README final (briefing §29) quando houver
@@ -31,14 +34,23 @@ docs/        engenharia reversa: inventário, arquitetura, modelo, regras,
              divergências, plano
 database/    schema.sql · views.sql · migrations/
 src/
+  main.prg   ponto de entrada da aplicação
+  app/       config.prg (F.6) · log.prg (F.5) · erro.prg (F.4)
+  database/  conexao.prg (F.2) · transacao.prg (F.3) · sql.prg
   migration/ extrator.prg (D.1) — leitura fiel dos .DBF via RDD DBFNTX
              normalizador.prg (D.2) — CP860, datas, centavos, CPF/CNPJ/CEP/tel
              inconsistencia.prg (D.3) — registro em tabela, texto e CSV
-  database/  sql.prg — hbsqlit3 com bind por tipo e transações
+             carregador.prg (D.4/D.5) — carga transacional e transformações
+             migrar.prg (D.6) — CLI, idempotência, códigos de saída
+             verificador.prg (E) — contagens, somas, campo a campo, FKs
 tests/
   migration/ testa_extrator.prg — aceite da D.1 contra as contagens da FASE A
              testa_normalizador.prg — aceite da D.2, 100 asserções
              testa_inconsistencia.prg — aceite da D.3, 35 asserções
+             testa_migracao.prg — aceite da D.4/D.5, 48 asserções
+             testa_verificacao.prg — aceite da E, 56 verificações
+  unit/      testa_infra.prg — aceite da F, 75 asserções
+config/      sccv.conf.exemplo
 tools/       dump-dbf.py · dump-ntx.py (inspeção do legado)
 ```
 
@@ -84,16 +96,45 @@ sqlite3 sccv.db < database/schema.sql
 sqlite3 sccv.db < database/views.sql
 ```
 
-## Rodar o aceite da migração
+## Rodar
 
 ```bash
-export PATH=/opt/harbour/bin:$PATH
-hbmk2 tests/migration/testa_extrator.prg src/migration/extrator.prg -gtcgi -otesta_extrator
-./testa_extrator            # sai com 0 se as contagens conferem
-
-hbmk2 tests/migration/testa_normalizador.prg src/migration/normalizador.prg -gtcgi -otesta_norm
-./testa_norm                # sai com 0 se as 100 asserções passam
+make                  # compila bin/sccv e bin/sccv-migrar
+make run              # estado do ambiente e do banco
+bin/sccv --config-mostrar     # configuração efetiva e de onde veio
+make install          # instala em ~/.local/bin (PREFIX=...)
 ```
+
+Configuração: veja [`config/sccv.conf.exemplo`](config/sccv.conf.exemplo). A
+precedência é `--config` · `$SCCV_CONFIG` · `$XDG_CONFIG_HOME/sccv/sccv.conf` ·
+`/etc/sccv/sccv.conf` · valores embutidos — o primeiro que existir vence, sem
+mesclar.
+
+## Migrar o legado
+
+```bash
+make check-deps                    # confere a toolchain
+make                               # compila bin/sccv-migrar
+make migrate                       # legacy/ → sccv.db
+make verificar                     # integridade do banco migrado
+make test                          # os quatro testes de aceite
+```
+
+Ou direto:
+
+```bash
+bin/sccv-migrar --origem legacy --destino sccv.db [--forcar]
+bin/sccv-migrar --verificar --destino sccv.db
+bin/sccv-migrar --relatorio --destino sccv.db
+```
+
+Saída: `0` sucesso · `1` uso · `2` origem inválida · `3` destino já populado sem
+`--forcar` · `4` falha na carga (rollback aplicado) · `5` falha na verificação.
+
+A migração não é incremental: reexecutar refaz tudo. Um destino já populado só é
+substituído com `--forcar`, e o banco anterior é preservado em
+`<nome>.db.bak.<timestamp>`. Cada execução gera `relatorio-migracao.txt` (formato
+do briefing §20) e `relatorio-migracao.csv`.
 
 ## Inspecionar o legado
 

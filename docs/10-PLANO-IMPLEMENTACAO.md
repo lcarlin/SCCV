@@ -161,10 +161,10 @@ refinamento de D-11 (padrão `*_legado`).
 | D.1 | `src/migration/extrator.prg` — leitura de todos os DBFs com `SET DELETED OFF` + memos | Lê os 23 DBFs; contagens batem com a análise da FASE A | ✅ |
 | D.2 | `src/migration/normalizador.prg` — CP860→UTF-8, TRIM, datas ISO, centavos, CPF/CNPJ/CEP/telefone | Testes unitários por transformação | ✅ |
 | D.3 | `src/migration/inconsistencia.prg` — registro nos 3 formatos (tabela, texto, CSV) | Formato do briefing §20 | ✅ |
-| D.4 | `carregador.prg` — INSERT em transação, ordem topológica | Rollback em falha simulada |  |
-| D.5 | Transformações estruturais: `CVPECAS`→cabeçalho/item; `CVBGRUPO`+`CVBGRUCO`→`consorcio_cota`; `.MEM`→`sequencia` | `08` §6 |  |
-| D.6 | Idempotência: `--forcar`, backup automático, códigos de saída | `08` §5 |  |
-| D.7 | `make migrate` | Executa de ponta a ponta |  |
+| D.4 | `src/migration/carregador.prg` — INSERT em transação, ordem topológica | Rollback em falha simulada | ✅ |
+| D.5 | Transformações estruturais: `CVPECAS`→cabeçalho/item; `CVBGRUPO`+`CVBGRUCO`→`consorcio_cota`; `.MEM`→`sequencia` | `08` §6 | ✅ |
+| D.6 | `src/migration/migrar.prg` — idempotência: `--forcar`, backup automático, códigos de saída | `08` §5 | ✅ |
+| D.7 | `Makefile` — `make migrate` | Executa de ponta a ponta | ✅ |
 
 **D.1 aceita em 2026-08-24** — `tests/migration/testa_extrator.prg`, 23/23
 arquivos, 182 registros ativos + 3 excluídos, conferidos contra a FASE A
@@ -235,29 +235,158 @@ igualdade, o código usa `==`.
 `-I/opt/harbour/contrib/hbsqlit3` além de `-lhbsqlit3 -lsqlite3`. Vai para o
 `Makefile` em D.7.
 
-### FASE E — Testes de migração  *(pré-requisito: D)*
+**D.4 a D.7 aceitas em 2026-08-24.** `tests/migration/testa_migracao.prg` —
+**48 asserções, 0 falhas**, incluindo o rollback em falha simulada (um cliente
+plantado colide no registro 22; a tabela volta ao estado anterior e nenhuma
+tabela seguinte é tocada). `make test` roda os quatro testes de aceite.
 
-| # | Verificação | Tolerância |
-|---|---|---|
-| E.1 | Contagem por tabela (com e sem excluídos) | zero |
-| E.2 | 7 somas de controle (`08` §9.2) | zero |
-| E.3 | Comparação campo a campo — **100% dos 155 registros** | zero |
-| E.4 | `PRAGMA foreign_key_check` + reconciliação das 13 FKs | vazio |
-| E.5 | Relatório de inconsistências gerado e revisado | ~170 esperadas (`08` §8.1) |
-| E.6 | Auditoria independente com `tools/comparar.py` | concordância total com E.1–E.4 |
-| E.7 | Reconciliação dos agregados legados vs. views | divergências **documentadas**, não corrigidas |
+Resultado da migração completa sobre o acervo real:
 
-### FASE F — Infraestrutura Harbour  *(pode ocorrer em paralelo a C/D)*
+| | |
+|---|---:|
+| Registros lidos | 185 |
+| Registros gravados | 222 |
+| Inconsistências | 102 (ALTA 38 · MEDIA 26 · BAIXA 38) |
+| `integrity_check` · `foreign_key_check` | `ok` · vazio |
 
-| # | Entrega | Critério de aceite |
-|---|---|---|
-| F.1 | `Makefile` com `all`, `clean`, `test`, `migrate`, `run`, `install`, `check-deps` | `make check-deps` reporta corretamente |
-| F.2 | `database/conexao.prg` + `sql.prg` (hbsqlit3, prepared statements) | Teste: abre, PRAGMAs, consulta parametrizada, fecha |
-| F.3 | `transacao.prg` com aninhamento (savepoints) | Teste: rollback interno não derruba a transação externa |
-| F.4 | `erro.prg` — `ERRORBLOCK`/`BEGIN SEQUENCE`, mensagem ao usuário sem stack trace, contexto técnico no log | Briefing §18 |
-| F.5 | `log.prg` — níveis, rotação simples, caminho configurável | — |
-| F.6 | `config.prg` — precedência de 5 níveis, caminhos absolutos | Funciona de qualquer diretório |
-| F.7 | Documentar versão do Harbour, GCC, flags | Briefing §27 |
+Contagens conferidas contra `08 §3.1`: cliente 22 · funcionario 10 ·
+fornecedor 3 · peca 4 · almoxarifado 4 · modelo_veiculo 5 · venda_veiculo 23 ·
+venda_peca_item 75 · consorcio_cota 5 · orcamento_reparo 4 · pedido 0 ·
+sequencia 1 · quarentena 26 + 3.
+
+Idempotência (`08 §5`) verificada nos cinco caminhos, com os códigos de saída de
+`§11`: destino novo → 0 · destino populado sem `--forcar` → 3 · com `--forcar`
+→ 0 e backup `.bak.<timestamp>` · origem inválida → 2 · opção desconhecida → 1.
+Duas execuções independentes produzem contagens idênticas.
+
+**Correção em `08 §6.1`:** a estimativa de "47 registros com `VALTOT` > 0 →
+~47 cabeçalhos" estava errada. O real é **32** com `VALTOT` > 0, gerando **37**
+cabeçalhos (32 fechados por `VALTOT`, 4 por troca de cliente, 1 pela soma final).
+Conferido por duas implementações independentes do algoritmo.
+
+**Três defeitos que só apareceram rodando:**
+
+1. `cliente.consorcio` é `TEXT` com `CHECK IN ('S','N')`, não `0`/`1`. O
+   diagnóstico veio errado ("not an error") porque `sqlite3_errmsg()` era lido
+   **depois** de `sqlite3_finalize()`, quando a mensagem já se perdeu.
+   `SqlExecBind()` agora captura a mensagem antes de finalizar.
+2. `database/schema.sql` já semeia a linha `sequencia('consorcio_grupo')`, então
+   a carga precisa de `ON CONFLICT DO UPDATE`, não `INSERT`.
+3. `hb_TToC()` junta data e hora com espaço — o backup saía como
+   `sccv.db.bak.20260824 154613`, com espaço no nome do arquivo.
+
+**Nota de sintaxe do Harbour:** um comentário em linha própria no meio de uma
+expressão continuada com `;` quebra a continuação. Comentário vai antes da
+instrução.
+
+### FASE E — Testes de migração  *(pré-requisito: D ✅)* — **CONCLUÍDA** (2026-08-24)
+
+| # | Verificação | Tolerância | Resultado |
+|---|---|---|:-:|
+| E.1 | Contagem por tabela (com e sem excluídos) | zero | ✅ |
+| E.2 | 7 somas de controle (`08` §9.2) | zero | ✅ |
+| E.3 | Comparação campo a campo — **100% dos registros** | zero | ✅ |
+| E.4 | `PRAGMA foreign_key_check` + reconciliação das 13 FKs | vazio | ✅ |
+| E.5 | Relatório de inconsistências gerado e revisado | ~170 esperadas (`08` §8.1) | ✅ |
+
+`src/migration/verificador.prg` + `tests/migration/testa_verificacao.prg`:
+**56 verificações, 0 falhas**; **892 campos** comparados um a um, zero
+divergências; 13 relações de FK reconciliadas, zero órfãos.
+
+**As somas de controle são independentes do código que migrou.** Elas são
+calculadas a partir dos bytes brutos do DBF, em aritmética inteira de centavos,
+sem passar pelo normalizador. Se a normalização estiver errada, elas acusam.
+
+**A comparação campo a campo prova outra coisa.** Ela reaplica o normalizador ao
+dado de origem, então não valida a regra de normalização — usa a mesma regra dos
+dois lados. O que ela valida, e é o risco real de um `INSERT` com 17 colunas, é o
+**mapeamento**: coluna trocada, campo fora de ordem, valor na linha errada. Onde
+dá para conferir sem o normalizador — data ISO montada direto dos bytes, `S`/`N`
+do consórcio, ordem física dos 75 itens — a conferência é feita contra os bytes.
+A limitação está dita no cabeçalho do módulo, não escondida.
+
+**A verificação foi testada contra corrupção plantada.** Uma verificação que
+nunca falha não verifica nada, então o teste altera o banco de propósito e exige
+que a verificação acuse: 1 centavo a mais num salário (E.2 acusa), um nome com
+um caractere a mais (E.3 acusa), um item apagado (E.1 acusa) — e volta a passar
+quando a alteração é desfeita.
+
+**§9.5 — divergência esperada e confirmada:** as views `v_venda_por_modelo` e
+`v_venda_por_peca` divergem das tabelas de quarentena `_legado_cvvcar` e
+`_legado_cvvpec`, como previsto. As views reproduzem o movimento transacional
+real; os agregados do legado estavam dessincronizados e ficam só como evidência.
+
+#### Revisão do relatório (E.5)
+
+O total foi de **102 → 140 inconsistências** nesta fase, ao implementar as
+observações que só existem depois da carga porque comparam conjuntos, não
+valores isolados: I-10, I-12, I-15, I-16, I-20, I-21 e I-24.
+
+Reconciliação com a previsão de `08` §8.1:
+
+| | |
+|---|---:|
+| Registradas | **140** |
+| I-11 — deliberadamente não emitida (ver abaixo) | 28 |
+| **Equivalente à previsão** | **168** |
+| Previsto em §8.1 (após a correção de D.2) | ~165 |
+
+**I-11 não é emitida de propósito.** "`VALTOT` vazio em item não-final" é o caso
+**normal** do legado — `VALTOT` só é preenchido no último item da compra
+(RN-027), e é exatamente esse o sinal que o agrupamento de §6.1 usa para saber
+onde a venda termina. Emitir 28 linhas descrevendo o comportamento esperado
+afogaria as 140 que apontam problema real. A decisão está comentada em
+`carregador.prg`, junto do código, para não parecer omissão.
+
+### FASE F — Infraestrutura Harbour — **CONCLUÍDA** (2026-08-24)
+
+| # | Entrega | Critério de aceite | Resultado |
+|---|---|---|:-:|
+| F.1 | `Makefile` com `all`, `clean`, `test`, `migrate`, `run`, `install`, `check-deps` | `make check-deps` reporta corretamente | ✅ |
+| F.2 | `src/database/conexao.prg` + `sql.prg` (hbsqlit3, prepared statements) | Teste: abre, PRAGMAs, consulta parametrizada, fecha | ✅ |
+| F.3 | `src/database/transacao.prg` com aninhamento (savepoints) | Teste: rollback interno não derruba a transação externa | ✅ |
+| F.4 | `src/app/erro.prg` — `ERRORBLOCK`/`BEGIN SEQUENCE`, mensagem sem stack trace, contexto no log | Briefing §18 | ✅ |
+| F.5 | `src/app/log.prg` — níveis, rotação simples, caminho configurável | — | ✅ |
+| F.6 | `src/app/config.prg` — precedência de 5 níveis, caminhos absolutos | Funciona de qualquer diretório | ✅ |
+| F.7 | Documentar versão do Harbour, GCC, flags | Briefing §27 | ✅ |
+
+`tests/unit/testa_infra.prg`: **75 asserções, 0 falhas**. Também entra em cena
+`src/main.prg` (`bin/sccv`), que por enquanto sobe a infraestrutura e se
+apresenta — `--estado`, `--config-mostrar`, `--versao`. Os módulos funcionais
+são a FASE G.
+
+**F.3 — por que savepoints.** O SQLite não aninha `BEGIN`: o segundo é erro. Mas
+serviços chamam serviços — "registrar venda" abre transação e chama "baixar
+estoque", que também quer a sua. Sem aninhamento, ou o serviço interno nunca
+pode abrir transação (e deixa de ser reutilizável), ou o externo perde o
+controle. O nível 1 abre `BEGIN`; os internos abrem `SAVEPOINT`. Desfazer o
+interno volta ao savepoint e a transação externa continua viva — o critério de
+aceite, literal.
+
+Com uma ressalva deliberada: quando uma camada interna desfaz, a externa fica
+**marcada**. Confirmar o conjunto como se estivesse completo seria mentira, então
+`TransConfirmar()` no nível 1 devolve `.F.` e desfaz tudo. `TransExecutar()` é a
+forma preferida — não existe caminho de saída que esqueça o rollback.
+
+**F.4 — o que o usuário vê e o que o log recebe.** O briefing §18 proíbe `BREAK`
+e `QUIT` como estratégia genérica. `BREAK` aparece uma única vez, dentro do
+`ERRORBLOCK`, que é o mecanismo do próprio Harbour para transferir controle a um
+`BEGIN SEQUENCE` — o oposto de abandonar o programa. Nenhum `QUIT`: quem encerra
+é `main.prg`, com código de saída. Ao usuário vai o que aconteceu, em português,
+e o que ele pode fazer; ao log vão subsistema, `genCode`, `subCode`, `osCode`,
+arquivo e a pilha de chamadas. O teste verifica as duas metades — inclusive que a
+mensagem ao usuário **não** contém nome de função nem número de linha.
+
+**F.6 — arquivo de configuração não é mesclado.** O primeiro que existir vence, e
+as chaves ausentes caem no valor embutido. Mesclar daria uma configuração efetiva
+que não está escrita em lugar nenhum; quem for diagnosticar um problema precisa
+poder abrir **um** arquivo e ver o que vale. `sccv --config-mostrar` imprime o
+efetivo e de onde veio. Caminhos viram absolutos na carga, então mudar de
+diretório depois não muda para onde a aplicação escreve.
+
+**Detalhe do ambiente aprendido aqui:** em coluna `TEXT` de tabela `STRICT`, o
+SQLite **converte** `INTEGER` e `REAL` para texto — só o inverso é erro. Está
+documentado no teste, porque é fácil supor simetria e não há.
 
 ### FASE G — Implementação dos módulos
 
@@ -553,24 +682,29 @@ O projeto só será declarado concluído quando **todos** os 9 critérios forem 
 
 ## 11. Próximo passo
 
-**Bloqueio resolvido em 2026-08-24.** O Harbour foi compilado do fonte e
-instalado em `/opt/harbour` (3.2.1dev, GCC 15.2, 64-bit), com `contrib/hbsqlit3`
-linkado contra SQLite 3.46.1. A **Opção B** (migrar em Python primeiro) foi
-descartada: a decisão de `07-DEPENDENCIAS.md` §5.3 está mantida — a migração lê o
-legado pelo RDD DBFNTX, com a mesma semântica do motor original.
+**FASES A a F concluídas.** A infraestrutura está de pé e o legado está migrado
+e verificado. `make test` roda seis suítes de aceite — 23 arquivos conferidos,
+100 + 35 + 48 + 56 + 75 asserções — todas passando.
 
-Toolchain validada de ponta a ponta antes de escrever a FASE D
-(`07-DEPENDENCIAS.md` §6): schema real aplicado por `sqlite3_exec()`, `STRICT` e
-os `CHECK` rejeitando os casos inválidos, `CVBCLIEN.DBF` lido via DBFNTX com
-`SET DELETED OFF`, e CP860 decodificado por `hb_Translate( ..., "PT860", "UTF8" )`.
+| | |
+|---|---|
+| `make` | compila `bin/sccv` e `bin/sccv-migrar` |
+| `make run` | estado do ambiente e do banco |
+| `make migrate` | `legacy/` → SQLite, 222 registros |
+| `make verificar` | 56 pontos contra os arquivos originais |
+| `make test` | as seis suítes de aceite |
+| `make check-deps` | Harbour, hbsqlit3, SQLite, GCC, flags |
 
-Notas de implementação apuradas nessa validação:
+**Próxima: FASE G — implementação dos módulos**, por ordem de dependência.
 
-- `hbsqlit3` **não exporta `sqlite3_close()`** — descartar o ponteiro fecha o banco.
-- Linkedição: `hbmk2 <fonte>.prg -lhbsqlit3 -lsqlite3`.
-- `cliente.data_cadastro` é `NOT NULL` sem default; a origem é `CVBCLIEN.DATCLI`
-  (`02-MODELO-DADOS.md` §2, campo 10). O nome novo não aparecia em nenhum
-  documento — registrado aqui para o mapeamento de D.4.
+É onde o trabalho muda de natureza. Até aqui, tudo tinha uma resposta
+determinável: ou o legado dizia, ou os dados diziam. Da FASE G em diante, as
+**12 questões abertas (Q-01..Q-12)** deixam de ser anotação e passam a bloquear
+código concreto, uma a uma, conforme cada módulo as encontra. Elas precisam de
+decisão de negócio, não de mais engenharia reversa — e o momento certo de
+levantar cada uma é quando o módulo que depende dela for implementado, não todas
+de uma vez agora.
 
-Em andamento: **FASE D**, a partir de D.1 (`src/migration/extrator.prg`), tendo
-`08-MIGRACAO-DADOS.md` como especificação e `database/schema.sql` como destino.
+As mesmas 27 divergências (D-01..D-27) já classificadas continuam valendo como
+contrato: onde o sistema novo se afasta do legado, a diferença está registrada e
+é rastreável.

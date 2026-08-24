@@ -304,7 +304,21 @@ Validação: para cada venda fechada por `VALTOT`, comparar `VALTOT` com `SUM(SU
 
 **Campo `origem`:** não é determinável a partir de `CVPECAS` (Q-02). **Todos os registros migrados recebem `origem = 'INDETERMINADO'`.** Não será inferido. A partir da nova implementação, cada venda registrará sua origem corretamente.
 
-Estimativa: 75 itens; 47 registros com `VALTOT` preenchido e > 0 → aproximadamente 47 cabeçalhos.
+**Medido na FASE D.4** (a estimativa anterior — "47 registros com `VALTOT` > 0 →
+aproximadamente 47 cabeçalhos" — estava errada):
+
+| | |
+|---|---:|
+| Itens em `CVPECAS` | 75 |
+| Registros com `VALTOT` > 0 | **32** |
+| Vendas fechadas por `VALTOT` | 32 |
+| Vendas fechadas por troca de cliente sem `VALTOT` | 4 |
+| Venda final fechada pela soma dos subtotais | 1 |
+| **Cabeçalhos em `venda_peca`** | **37** |
+
+O número foi conferido por duas implementações independentes do algoritmo acima —
+o carregador em Harbour e uma simulação em Python sobre os mesmos bytes — que
+chegaram ao mesmo 37.
 
 ### 6.2 `CVBGRUPO` + `CVBGRUCO` → `consorcio_cota`
 
@@ -427,7 +441,7 @@ Severidade: ALTA
 | I-08 | `NUMMES` com overflow (`**`) | 1 | ALTA |
 | I-09 | `NUMMES` negativo | 2 | ALTA |
 | I-10 | `NUMPAG`/`NUMGRU` sempre vazios | 8 (2 campos × 4 reg.) | BAIXA (informativa) |
-| I-11 | `VALTOT` vazio/zero em item não-final | 28 | BAIXA (esperado — RN-027) |
+| I-11 | `VALTOT` vazio/zero em item não-final | 28 | **não emitida** — ver nota |
 | I-12 | `QUANTC` vazio em `CVVPEC` | 6 | BAIXA (quarentena) |
 | I-13 | Desnormalização divergente `DESCAR` | 5 | MÉDIA |
 | I-14 | Desnormalização divergente `DECPEC` | 1 | MÉDIA |
@@ -445,6 +459,16 @@ Severidade: ALTA
 **Total estimado: ~165 inconsistências** sobre 155 registros. Este número alto é
 esperado: os dados são uma massa de teste de 1994, não um acervo de produção.
 
+> **I-11 não é emitida (decidido na FASE E).** `VALTOT` preenchido só no último
+> item da compra é o caso **normal** do legado (RN-027) — e é exatamente o sinal
+> que o agrupamento de §6.1 usa para saber onde a venda termina. Registrar 28
+> inconsistências descrevendo o comportamento esperado afogaria as 140 que
+> apontam problema real. A decisão está comentada em `carregador.prg`.
+>
+> **Resultado real da migração (FASE E, 2026-08-24): 140 inconsistências**
+> registradas — ALTA 46 · MEDIA 26 · BAIXA 68. Com as 28 de I-11 que ficaram
+> deliberadamente de fora, o equivalente à previsão é 168.
+>
 > As linhas marcadas **(medido)** deixaram de ser estimativa na FASE D.2: foram
 > contadas rodando o extrator (D.1) e o normalizador (D.2) sobre os arquivos
 > reais. Conferidas e batendo com a previsão original: I-03 (2), I-04 (2),
