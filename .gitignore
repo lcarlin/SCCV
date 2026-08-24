@@ -1,0 +1,61 @@
+# Harbour build
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+*.out
+
+# Harbour generated files
+*.ppo
+*.pp
+*.c
+*.log
+*.tds
+*.bak
+
+# Build directories
+build/
+dist/
+
+# Executables
+bin/*
+
+# Runtime
+logs/*
+*.pid
+
+# SQLite
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+*-journal
+*-wal
+*-shm
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/settings.local.json
+
+# Environment / secrets
+.env
+.env.*
+!.env.example

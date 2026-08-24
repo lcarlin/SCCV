@@ -1,0 +1,23 @@
+-- ===========================================================================
+--  Migração de schema 001 — baseline
+--  user_version: 0 → 1
+--
+--  Esta é a versão inicial do esquema. Corresponde exatamente a
+--  ../schema.sql + ../views.sql aplicados em sequência sobre um banco vazio.
+--
+--  Para um banco NOVO, aplique os dois arquivos originais:
+--      sqlite3 sccv.db < database/schema.sql
+--      sqlite3 sccv.db < database/views.sql
+--
+--  Este arquivo existe para registrar a baseline no histórico de migrações.
+--  As alterações posteriores de schema virão como 002-*.sql, 003-*.sql etc.,
+--  cada uma elevando PRAGMA user_version e sendo aplicável de forma
+--  incremental sobre um banco em produção.
+--
+--  CONVENÇÃO para as próximas migrações:
+--    · uma transação por arquivo (BEGIN / COMMIT)
+--    · PRAGMA user_version = <n> dentro da transação
+--    · idempotência verificável: rodar duas vezes deve falhar de forma
+--      explícita, nunca corromper
+--    · nenhuma migração descarta coluna com dado sem backup prévio
+-- ===========================================================================
