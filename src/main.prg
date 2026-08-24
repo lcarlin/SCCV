@@ -24,6 +24,12 @@ PROCEDURE Main( ... )
 
    LOCAL hArg, nSaida
 
+   /* Começa em CGI, sem controle de tela: --estado, --versao e
+      --config-mostrar precisam produzir saída limpa, utilizável em script.
+      tela.prg troca para TRM ao abrir a interface. Fazer isto aqui, e não
+      pela ordem dos -gt no link, deixa a decisão explícita no código. */
+   hb_gtReload( "CGI" )
+
    hArg := Argumentos( hb_AParams() )
    IF hArg[ "erro" ] != NIL
       OutErr( "erro de uso: " + hArg[ "erro" ] + hb_eol() )
@@ -47,7 +53,8 @@ PROCEDURE Main( ... )
 
    DO CASE
    CASE hArg[ "config_mostrar" ] ; nSaida := MostrarConfig()
-   OTHERWISE                     ; nSaida := Estado()
+   CASE hArg[ "estado" ]         ; nSaida := Estado()
+   OTHERWISE                     ; nSaida := Aplicacao()
    ENDCASE
 
    ConexaoFechar()
@@ -85,6 +92,46 @@ STATIC FUNCTION Iniciar( hArg )
 
    RETURN SAIDA_OK
 
+/*
+ * Abre a aplicação. As ondas 2 a 8 da FASE G ligam os destinos do menu; até lá
+ * o despachante responde honestamente que o destino não existe ainda, em vez
+ * de abrir uma tela vazia.
+ */
+STATIC FUNCTION Aplicacao()
+
+   LOCAL hCob
+
+   IF !ConexaoMigrado( ConexaoDb() )
+      Escrever( "O banco ainda não foi migrado. Execute:  make migrate" )
+      RETURN SAIDA_BANCO
+   ENDIF
+
+   hCob := MenuCobertura( {| c | AcaoImplementada( c ) } )
+   LogInfo( "menu aberto", "destinos=" + hb_ntos( hCob[ "total" ] ) + ;
+            " implementados=" + hb_ntos( hCob[ "implementados" ] ) )
+
+   TelaIniciar()
+   MenuPrincipal( {| c | Despachar( c ) }, {| c | AcaoImplementada( c ) } )
+   TelaEncerrar()
+
+   Escrever( "S.C.C.V. encerrado. " + hb_ntos( hCob[ "implementados" ] ) + " de " + ;
+             hb_ntos( hCob[ "total" ] ) + " destinos do menu implementados." )
+
+   RETURN SAIDA_OK
+
+/*
+ * Nenhum destino está implementado ainda: a onda 1 entrega a infraestrutura de
+ * tela, não os módulos. Esta lista cresce a cada onda, e é ela — não a
+ * definição do menu — que decide o que aparece como pronto.
+ */
+STATIC FUNCTION AcaoImplementada( cAcao )
+   HB_SYMBOL_UNUSED( cAcao )
+   RETURN .F.
+
+STATIC FUNCTION Despachar( cAcao )
+   Mensagem( "Destino '" + cAcao + "' ainda não implementado" )
+   RETURN .T.
+
 STATIC FUNCTION Estado()
 
    LOCAL pDb := ConexaoDb(), lMig
@@ -115,7 +162,9 @@ STATIC FUNCTION Estado()
       Escrever( "Execute a migração antes de usar o sistema:  make migrate" )
    ENDIF
    Escrever( "" )
-   Escrever( "Módulos funcionais: FASE G, ainda não implementada." )
+   Escrever( "" )
+   Escrever( "menu .........: " + hb_ntos( MenuCobertura( {| c | AcaoImplementada( c ) } )[ "implementados" ] ) + ;
+             " de " + hb_ntos( MenuCobertura()[ "total" ] ) + " destinos implementados" )
 
    RETURN SAIDA_OK
 
@@ -144,7 +193,7 @@ STATIC FUNCTION Argumentos( aArgs )
    LOCAL hArg, i, cArg
 
    hArg := { "config" => NIL, "banco" => NIL, "versao" => .F., ;
-             "config_mostrar" => .F., "erro" => NIL }
+             "config_mostrar" => .F., "estado" => .F., "erro" => NIL }
 
    i := 1
    DO WHILE i <= Len( aArgs )
@@ -166,8 +215,7 @@ STATIC FUNCTION Argumentos( aArgs )
          hArg[ "banco" ] := aArgs[ i ]
       CASE cArg == "--versao"         ; hArg[ "versao" ] := .T.
       CASE cArg == "--config-mostrar" ; hArg[ "config_mostrar" ] := .T.
-      CASE cArg == "--estado"
-         /* é o comportamento padrão; aceito explicitamente por clareza */
+      CASE cArg == "--estado"         ; hArg[ "estado" ] := .T.
       CASE cArg == "--ajuda" .OR. cArg == "-h"
          Uso()
          hArg[ "versao" ] := .T.
@@ -185,7 +233,7 @@ STATIC PROCEDURE Uso()
    Escrever( "uso: sccv [opções]" )
    Escrever( "  --config <arquivo>   arquivo de configuração" )
    Escrever( "  --banco <arquivo>    banco de dados (sobrepõe a configuração)" )
-   Escrever( "  --estado             estado do ambiente e do banco (padrão)" )
+   Escrever( "  --estado             estado do ambiente e do banco" )
    Escrever( "  --config-mostrar     configuração efetiva e sua origem" )
    Escrever( "  --versao             versão e ambiente" )
    RETURN

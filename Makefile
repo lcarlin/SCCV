@@ -8,29 +8,43 @@ HBMK2     := $(HB_DIR)/bin/hbmk2
 HB_INC    := -I$(HB_DIR)/contrib/hbsqlit3
 HB_LIBS   := -lhbsqlit3 -lsqlite3
 HBFLAGS   := $(HB_INC) $(HB_LIBS) -gtcgi
+# a aplicação tem telas: precisa de um GT com controle de cursor e cores.
+# As ferramentas de linha de comando (migração, testes) seguem em gtcgi, que
+# não emite sequências de posicionamento no meio da saída.
+# gtcgi é o GT PADRÃO (no hbmk2, o PRIMEIRO -gt vence), para que --estado, --versao e
+# --config-mostrar produzam saída limpa, utilizável em script. tela.prg troca
+# para TRM em tempo de execução, só ao abrir a interface.
+APPFLAGS  := $(HB_INC) $(HB_LIBS) -gtcgi -gttrm
 
 BIN       := bin
 PREFIX    ?= $(HOME)/.local
 ORIGEM    ?= legacy
 DESTINO   ?= sccv.db
 
+# validacao.prg é pura (só lógica); integridade.prg consulta o banco
+UI_SRC    := src/ui/tela.prg src/ui/menu.prg src/ui/lookup.prg \
+             src/ui/formulario.prg src/ui/browse.prg
+
+VAL_PURA  := src/validation/validacao.prg
+VAL_SRC   := $(VAL_PURA) src/validation/integridade.prg
+
 APP_SRC   := src/app/config.prg src/app/log.prg src/app/erro.prg \
              src/database/conexao.prg src/database/transacao.prg \
-             src/database/sql.prg
+             src/database/sql.prg $(VAL_SRC) $(UI_SRC)
 
 MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
              src/migration/normalizador.prg src/migration/inconsistencia.prg \
-             src/migration/verificador.prg src/database/sql.prg
+             src/migration/verificador.prg src/database/sql.prg $(VAL_PURA)
 
 TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao \
-             testa_verificacao testa_infra
+             testa_verificacao testa_infra testa_validacao testa_ui
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda run install desinstalar
 
 all: $(BIN)/sccv $(BIN)/sccv-migrar
 
 $(BIN)/sccv: src/main.prg $(APP_SRC) | $(BIN)
-	$(HBMK2) $< $(APP_SRC) $(HBFLAGS) -o$@
+	$(HBMK2) $< $(APP_SRC) $(APPFLAGS) -o$@
 
 $(BIN)/sccv-migrar: src/migration/migrar.prg $(MIG_SRC) | $(BIN)
 	$(HBMK2) $< $(MIG_SRC) $(HBFLAGS) -o$@
@@ -82,11 +96,14 @@ test: $(addprefix $(BIN)/,$(TESTES))
 $(BIN)/testa_extrator: tests/migration/testa_extrator.prg src/migration/extrator.prg | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
-$(BIN)/testa_normalizador: tests/migration/testa_normalizador.prg src/migration/normalizador.prg | $(BIN)
+# normalizador.prg usa a regra de DV de $(VAL_SRC) — uma implementação só
+$(BIN)/testa_normalizador: tests/migration/testa_normalizador.prg \
+        src/migration/normalizador.prg $(VAL_PURA) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_inconsistencia: tests/migration/testa_inconsistencia.prg \
-        src/migration/inconsistencia.prg src/migration/normalizador.prg src/database/sql.prg | $(BIN)
+        src/migration/inconsistencia.prg src/migration/normalizador.prg \
+        src/database/sql.prg $(VAL_PURA) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_migracao: tests/migration/testa_migracao.prg $(MIG_SRC) | $(BIN)
@@ -96,6 +113,15 @@ $(BIN)/testa_verificacao: tests/migration/testa_verificacao.prg $(MIG_SRC) | $(B
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_infra: tests/unit/testa_infra.prg $(APP_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+# linka o normalizador de propósito: o teste verifica que a migração e a
+# aplicação usam a MESMA regra de dígito verificador
+$(BIN)/testa_validacao: tests/unit/testa_validacao.prg $(APP_SRC) \
+        src/migration/normalizador.prg | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+$(BIN)/testa_ui: tests/unit/testa_ui.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # --- utilidades -------------------------------------------------------

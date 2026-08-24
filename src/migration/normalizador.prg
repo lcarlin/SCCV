@@ -459,78 +459,21 @@ FUNCTION NormTelefone( cBruto )
 /* ------------------------------------------------------------------ */
 
 FUNCTION NormSoDigitos( cBruto )
-
-   LOCAL cRes := "", i, c
-
-   IF cBruto == NIL
-      RETURN ""
-   ENDIF
-   FOR i := 1 TO Len( cBruto )
-      c := SubStr( cBruto, i, 1 )
-      IF c >= "0" .AND. c <= "9"
-         cRes += c
-      ENDIF
-   NEXT
-
-   RETURN cRes
+   RETURN ValidaDigitos( cBruto )
 
 STATIC FUNCTION NormSoTemDigitos( cTxt )
    RETURN !Empty( cTxt ) .AND. Len( NormSoDigitos( cTxt ) ) == Len( cTxt )
 
 STATIC FUNCTION NormDigitosIguais( cDig )
-
-   LOCAL i
-
-   FOR i := 2 TO Len( cDig )
-      IF SubStr( cDig, i, 1 ) != Left( cDig, 1 )
-         RETURN .F.
-      ENDIF
-   NEXT
-
-   RETURN .T.
-
-/* DV de CPF (11) e CNPJ (14) — módulo 11, resto < 2 → dígito 0. */
-STATIC FUNCTION NormDvOk( cDig, nDigitos )
-
-   LOCAL nBase := nDigitos - 2
-
-   RETURN NormCalcDv( Left( cDig, nBase ), nDigitos ) == SubStr( cDig, nBase + 1, 2 )
+   RETURN ValidaRepetido( cDig )
 
 /*
- * Gera os dois dígitos verificadores a partir da base.
- * O 2º DV é calculado sobre a base acrescida do 1º DV gerado — é assim que o
- * número é emitido, e comparar o par gerado com o par informado rejeita
- * corretamente um erro em qualquer um dos dois.
+ * DV de CPF e CNPJ: a regra vive em src/validation/validacao.prg e é a MESMA
+ * usada pela aplicação. Duas cópias divergiriam com o tempo, e um documento
+ * seria aceito na tela e recusado na migração, ou vice-versa.
  */
-STATIC FUNCTION NormCalcDv( cBase, nDigitos )
-
-   LOCAL j, i, nSoma, nDv, cCalc := "", cNum := cBase, aPesos
-
-   FOR j := 1 TO 2
-      nSoma := 0
-      IF nDigitos == 11
-         /* CPF: pesos decrescentes até 2 — 10..2 no 1º DV, 11..2 no 2º */
-         FOR i := 1 TO Len( cNum )
-            nSoma += Val( SubStr( cNum, i, 1 ) ) * ( Len( cNum ) + 2 - i )
-         NEXT
-      ELSE
-         /* CNPJ: 5..2 seguido de 9..2, deslocado de uma casa no 2º DV */
-         aPesos := iif( j == 1, ;
-            { 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 }, ;
-            { 6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 } )
-         FOR i := 1 TO Len( aPesos )
-            nSoma += Val( SubStr( cNum, i, 1 ) ) * aPesos[ i ]
-         NEXT
-      ENDIF
-      nDv := nSoma % 11
-      nDv := iif( nDv < 2, 0, 11 - nDv )
-      /* Str(,1) e não hb_ntos(): o operador % devolve numérico COM casas
-         decimais, e hb_ntos( 3.00 ) produz "3.00", não "3". */
-      cCalc += Str( nDv, 1 )
-      cNum  += Str( nDv, 1 )
-   NEXT
-
-   RETURN cCalc
+STATIC FUNCTION NormDvOk( cDig, nDigitos )
+   RETURN ValidaDvOk( cDig, nDigitos )
 
 STATIC FUNCTION NormResultado( xValor )
    RETURN { "valor" => xValor, "ocorrencias" => {} }
