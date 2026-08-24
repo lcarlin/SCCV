@@ -1,0 +1,40 @@
+# S.C.C.V. — configuração
+#
+# Copie para um destes caminhos (o primeiro que existir vence):
+#
+#   $SCCV_CONFIG
+#   $XDG_CONFIG_HOME/sccv/sccv.conf   ou  ~/.config/sccv/sccv.conf
+#   /etc/sccv/sccv.conf
+#
+# Ou aponte com  sccv --config <arquivo>.
+#
+# O arquivo escolhido NÃO é mesclado com os outros: o que estiver aqui vale,
+# e o que faltar cai no valor embutido. Assim dá para abrir um arquivo só e
+# saber o que está valendo. Veja o efetivo com  sccv --config-mostrar.
+#
+# Caminhos relativos são resolvidos a partir do diretório corrente no momento
+# da carga, e viram absolutos: a aplicação funciona de qualquer diretório.
+
+# Banco de dados. Padrão: ~/.local/share/sccv/sccv.db
+banco = /home/usuario/.local/share/sccv/sccv.db
+
+# Log. Padrão: ~/.local/state/sccv/sccv.log
+log = /home/usuario/.local/state/sccv/sccv.log
+
+# Nível: DEBUG, INFO, AVISO, ERRO. Padrão: INFO
+log_nivel = INFO
+
+# Tamanho a partir do qual o log rotaciona (vira .1). Padrão: 1048576 (1 MiB)
+log_max_bytes = 1048576
+
+# Backups automáticos. Padrão: ~/.local/share/sccv/backup
+backup_dir = /home/usuario/.local/share/sccv/backup
+
+# Onde os relatórios são gravados quando --saida não é informado.
+# Padrão: diretório corrente
+relatorio_dir = .
+
+# --- instalação multiusuário (alternativa documentada) ---
+# banco      = /var/lib/sccv/sccv.db
+# log        = /var/log/sccv/sccv.log
+# backup_dir = /var/lib/sccv/backup
