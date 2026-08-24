@@ -212,8 +212,24 @@ STATIC PROCEDURE TestaConexao()
          SqlExecBind( pDb, "INSERT INTO t (id, nome) VALUES (?,?)", { 3, 5 } ), 0 )
    Vale( "e o valor vira texto", SqlEscalar( pDb, "SELECT nome FROM t WHERE id = 3" ), "5" )
 
+   /* tipos que o ramo OTHERWISE antigo mandava para bind_text e derrubavam o
+      processo com "Argument error: SQLITE3_BIND_TEXT (Quit)" */
+   Vale( "data é gravada como texto ISO", ;
+         SqlExecBind( pDb, "INSERT INTO t (id, nome) VALUES (?,?)", ;
+                      { 4, hb_SToD( "19940630" ) } ), 0 )
+   Vale( "e no formato do schema", ;
+         SqlEscalar( pDb, "SELECT nome FROM t WHERE id = 4" ), "1994-06-30" )
+   Vale( "data vazia vira NULL", ;
+         SqlExecBind( pDb, "INSERT INTO t (id, nome) VALUES (?,?)", { 5, hb_SToD( "" ) } ), 0 )
+   Vale( "e é NULL mesmo", SqlEscalar( pDb, "SELECT nome FROM t WHERE id = 5" ), NIL )
+   Vale( "tipo não gravável é recusado, não derruba o processo", ;
+         SqlExecBind( pDb, "INSERT INTO t (id, nome) VALUES (?,?)", { 6, { 1, 2 } } ) != 0, .T. )
+   Vale( "com mensagem dizendo qual parâmetro", ;
+         At( "parâmetro 2", SqlErro( pDb ) ) > 0, .T. )
+   Vale( "e a execução continua", 1 + 1, 2 )
+
    aL := SqlLinhas( pDb, "SELECT id, nome FROM t ORDER BY id" )
-   Vale( "SqlLinhas devolve as linhas", Len( aL ), 3 )
+   Vale( "SqlLinhas devolve as linhas", Len( aL ), 5 )
 
    ConexaoFechar()
    Vale( "fechar limpa a conexão", ConexaoDb(), NIL )

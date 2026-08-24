@@ -63,7 +63,7 @@ FUNCTION SqlErro( pDb )
  */
 FUNCTION SqlExecBind( pDb, cSql, aValores )
 
-   LOCAL pStmt, i, xVal, nRc
+   LOCAL pStmt, i, nRc
 
    hb_default( @aValores, {} )
 
@@ -74,21 +74,12 @@ FUNCTION SqlExecBind( pDb, cSql, aValores )
    ENDIF
 
    FOR i := 1 TO Len( aValores )
-      xVal := aValores[ i ]
-      DO CASE
-      CASE xVal == NIL
-         sqlite3_bind_null( pStmt, i )
-      CASE ValType( xVal ) == "N"
-         IF xVal == Int( xVal )
-            sqlite3_bind_int64( pStmt, i, xVal )
-         ELSE
-            sqlite3_bind_double( pStmt, i, xVal )
-         ENDIF
-      CASE ValType( xVal ) == "L"
-         sqlite3_bind_int( pStmt, i, iif( xVal, 1, 0 ) )
-      OTHERWISE
-         sqlite3_bind_text( pStmt, i, xVal )
-      ENDCASE
+      IF !SqlBind( pStmt, i, aValores[ i ] )
+         s_cUltimoErro := "parâmetro " + hb_ntos( i ) + " é do tipo " + ;
+            ValType( aValores[ i ] ) + ", que não pode ser gravado no banco"
+         sqlite3_finalize( pStmt )
+         RETURN -1
+      ENDIF
    NEXT
 
    nRc := sqlite3_step( pStmt )
@@ -151,6 +142,90 @@ FUNCTION SqlLinhas( pDb, cSql )
    sqlite3_finalize( pStmt )
 
    RETURN aRes
+
+/*
+ * Como SqlLinhas, com parâmetros. Existe porque consulta com valor vindo do
+ * usuário não pode ser montada por concatenação (briefing §16) — e uma leitura
+ * parametrizada era justamente o que faltava nesta camada.
+ */
+FUNCTION SqlLinhasBind( pDb, cSql, aValores )
+
+   LOCAL pStmt, aRes := {}, aLinha, i, nCols
+
+   hb_default( @aValores, {} )
+
+   pStmt := sqlite3_prepare( pDb, cSql )
+   IF pStmt == NIL
+      RETURN aRes
+   ENDIF
+
+   FOR i := 1 TO Len( aValores )
+      IF !SqlBind( pStmt, i, aValores[ i ] )
+         s_cUltimoErro := "parâmetro " + hb_ntos( i ) + " é do tipo " + ;
+            ValType( aValores[ i ] ) + ", que não pode ser gravado no banco"
+         sqlite3_finalize( pStmt )
+         RETURN aRes
+      ENDIF
+   NEXT
+
+   DO WHILE sqlite3_step( pStmt ) == SQLITE_ROW
+      nCols := sqlite3_column_count( pStmt )
+      aLinha := {}
+      FOR i := 1 TO nCols
+         DO CASE
+         CASE sqlite3_column_type( pStmt, i ) == SQLITE_NULL
+            AAdd( aLinha, NIL )
+         CASE sqlite3_column_type( pStmt, i ) == SQLITE_TEXT
+            AAdd( aLinha, sqlite3_column_text( pStmt, i ) )
+         OTHERWISE
+            AAdd( aLinha, sqlite3_column_int64( pStmt, i ) )
+         ENDCASE
+      NEXT
+      AAdd( aRes, aLinha )
+   ENDDO
+   sqlite3_finalize( pStmt )
+
+   RETURN aRes
+
+/*
+ * Liga um valor ao parâmetro nPos. Devolve .F. se o tipo não for gravável.
+ *
+ * O ramo OTHERWISE mandava QUALQUER tipo não previsto para sqlite3_bind_text(),
+ * que aborta o programa com "Argument error: SQLITE3_BIND_TEXT (Quit)" ao
+ * receber algo que não é string. Um erro de tipo em UM parâmetro derrubava a
+ * migração inteira sem dizer qual parâmetro nem qual tabela — exatamente o que
+ * o briefing §18 proíbe. Agora cada tipo é tratado, e o que não for gravável
+ * vira erro com mensagem, não morte do processo.
+ *
+ * Data entra como TEXT em formato ISO: é assim que o schema a armazena
+ * (CHECK ... GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]').
+ */
+STATIC FUNCTION SqlBind( pStmt, nPos, xVal )
+
+   DO CASE
+   CASE xVal == NIL
+      sqlite3_bind_null( pStmt, nPos )
+   CASE ValType( xVal ) == "C" .OR. ValType( xVal ) == "M"
+      sqlite3_bind_text( pStmt, nPos, xVal )
+   CASE ValType( xVal ) == "N"
+      IF xVal == Int( xVal )
+         sqlite3_bind_int64( pStmt, nPos, xVal )
+      ELSE
+         sqlite3_bind_double( pStmt, nPos, xVal )
+      ENDIF
+   CASE ValType( xVal ) == "L"
+      sqlite3_bind_int( pStmt, nPos, iif( xVal, 1, 0 ) )
+   CASE ValType( xVal ) == "D"
+      IF Empty( xVal )
+         sqlite3_bind_null( pStmt, nPos )
+      ELSE
+         sqlite3_bind_text( pStmt, nPos, hb_DToC( xVal, "YYYY-MM-DD" ) )
+      ENDIF
+   OTHERWISE
+      RETURN .F.
+   ENDCASE
+
+   RETURN .T.
 
 FUNCTION SqlUltimoId( pDb )
    RETURN sqlite3_last_insert_rowid( pDb )

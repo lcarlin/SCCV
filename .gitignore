@@ -63,3 +63,6 @@ Thumbs.db
 # Relatórios gerados pela migração
 relatorio-migracao.txt
 relatorio-migracao.csv
+
+# saída de execuções da migração
+saida_migracao.txt
