@@ -120,17 +120,49 @@ STATIC FUNCTION Aplicacao()
    RETURN SAIDA_OK
 
 /*
- * Nenhum destino está implementado ainda: a onda 1 entrega a infraestrutura de
- * tela, não os módulos. Esta lista cresce a cada onda, e é ela — não a
- * definição do menu — que decide o que aparece como pronto.
+ * Esta lista — e não a definição do menu — decide o que aparece como pronto.
+ * Cresce a cada onda da FASE G. Onda 2: cadastros de nível 0.
  */
 STATIC FUNCTION AcaoImplementada( cAcao )
-   HB_SYMBOL_UNUSED( cAcao )
-   RETURN .F.
+   RETURN AScan( { "cliente.manutencao", "cliente.consulta", ;
+                   "funcionario.manutencao", "funcionario.consulta", ;
+                   "fornecedor.manutencao", "fornecedor.consulta", ;
+                   "modelo.manutencao" }, ;
+                 {| x | x == cAcao } ) > 0
 
 STATIC FUNCTION Despachar( cAcao )
-   Mensagem( "Destino '" + cAcao + "' ainda não implementado" )
+
+   LOCAL pDb := ConexaoDb(), hRes
+
+   /* toda a operação corre protegida: um erro num cadastro não pode derrubar
+      o sistema inteiro nem deixar transação aberta (briefing §18) */
+   hRes := ErroProteger( {| | DespacharAcao( pDb, cAcao ) }, ;
+                         "executar '" + cAcao + "'", ;
+                         {| e | HB_SYMBOL_UNUSED( e ), TransAbortarTudo( pDb ) } )
+   IF !hRes[ "ok" ]
+      Mensagem( Left( hRes[ "mensagem" ], 76 ) )
+   ENDIF
+
    RETURN .T.
+
+STATIC FUNCTION DespacharAcao( pDb, cAcao )
+
+   DO CASE
+   CASE cAcao == "cliente.manutencao"
+      CadastroManutencao( pDb, ClienteDescritor() )
+   CASE cAcao == "cliente.consulta"
+      CadastroManutencao( pDb, ClienteDescritor() )
+   CASE cAcao == "funcionario.manutencao" .OR. cAcao == "funcionario.consulta"
+      CadastroManutencao( pDb, FuncionarioDescritor() )
+   CASE cAcao == "fornecedor.manutencao" .OR. cAcao == "fornecedor.consulta"
+      CadastroManutencao( pDb, FornecedorDescritor() )
+   CASE cAcao == "modelo.manutencao"
+      CadastroManutencao( pDb, ModeloVeiculoDescritor() )
+   OTHERWISE
+      Mensagem( "Destino '" + cAcao + "' ainda não implementado" )
+   ENDCASE
+
+   RETURN NIL
 
 STATIC FUNCTION Estado()
 
