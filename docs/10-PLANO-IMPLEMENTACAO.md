@@ -397,7 +397,7 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 | **1** ✅ | `ui/` (menu, tela, lookup, formulário, browse) · `validation/` completo | F |
 | **2** ✅ | Cadastros nível 0: **cliente**, **funcionário**, **fornecedor**, **modelo_veiculo** (manutenção + consulta) | 1 |
 | **3** ✅ | Cadastros nível 1: **peça**, **almoxarifado** (manutenção + consulta) | 2 |
-| **4** | `services/comissao.prg` · `services/estoque.prg` | 2, 3 |
+| **4** ✅ | `services/comissao.prg` · `services/estoque.prg` | 2, 3 |
 | **5** | Movimento: **venda de peças (balcão)**, **reparo**, **pronta entrega** | 3, 4 |
 | **6** | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
 | **7** | Relatórios R-01..R-10 | 2–6 |
@@ -487,6 +487,65 @@ avisa.
 não tem valor histórico a preservar, ao contrário do movimento, onde o snapshot
 é deliberado (D-19).
 
+#### Onda 4 — concluída em 2026-08-24
+
+`services/comissao.prg` e `services/estoque.prg`. 50 asserções em
+`tests/unit/testa_servicos.prg`.
+
+Esta onda é quase toda sobre **preservar defeito de propósito**, e o teste
+existe tanto para verificar o que foi feito quanto para impedir que alguém
+"conserte" o que não deve ser consertado sem decisão do negócio.
+
+**Comissão** — três fórmulas, duas coerentes e uma anômala:
+
+| Regra | Base | Estado |
+|---|---|---|
+| RN-030 venda de peças e reparos | **código do funcionário** × 0,20 | preservada literal — **Q-10** |
+| RN-031 pronta entrega | 1,5% do valor do veículo | preservada |
+| RN-032 consórcio | 0,15% da prestação | preservada |
+
+RN-030 usa o *código* do funcionário como base: quem tem código 11 ganha R$ 2,20
+por venda e quem tem código 1 ganha R$ 0,20, independentemente do valor vendido.
+Não foi corrigida — três leituras são igualmente plausíveis (20% do item, 2% da
+compra, R$ 0,20 por peça) e nada decide entre elas. Fica isolada em
+`ComissaoVendaPeca()`, de três linhas: responder Q-10 é alterar uma linha.
+
+**D-07 corrigido:** a comissão vai para o funcionário informado. No legado, um
+`USE CVBFUNC` redundante reposicionava a tabela e creditava sempre o primeiro do
+arquivo — visível nos dados, com o funcionário 1 acumulando R$ 1.500,80 contra
+R$ 0,00 de três outros, em 23 vendas distribuídas entre 6 vendedores.
+
+**Estoque** — o legado tinha **um** alerta e **nenhuma** checagem de piso. Aqui
+são dois conceitos separados, e a distinção é o ponto da onda:
+
+- **abaixo do mínimo** → aviso, prossegue com confirmação. RN-028, preservada
+  integralmente;
+- **abaixo de zero** → recusa. D-27, a única divergência do projeto que torna
+  *mais restritiva* uma operação que o legado aceitava. Estoque físico negativo
+  não significa nada.
+
+**D-08 corrigido:** a baixa sai do modelo efetivamente vendido. No legado saía
+sempre do primeiro da tabela — está nos dados: o primeiro modelo tem 89 unidades
+e os demais 99, 99, 100, 100, embora as 23 vendas envolvam 4 modelos.
+
+**D-13 preservado (Q-12):** o reparo continua **não** baixando estoque de peças.
+`EstoqueReparoBaixa()` devolve `.F.` e existe para que a decisão, quando vier,
+tenha um lugar só para mudar.
+
+**Acréscimo declarado:** `EstoqueRepor()` não existe no legado, onde não há
+cancelamento de movimento. Sem ela, excluir uma venda deixaria o estoque
+permanentemente errado.
+
+**Aritmética em centavos, inteira.** O legado calculava em ponto flutuante e
+gravava em `N(12,2)`, deixando o Clipper arredondar. Aqui o arredondamento é
+explícito, para o centavo mais próximo — `0,015` não tem representação binária
+exata, e usá-lo faria centavos aparecerem e sumirem conforme o valor.
+
+**Erro no roteiro, corrigido:** a tabela de ondas atribuía a `estoque.prg` as
+regras RN-014, RN-015, RN-017 e RN-018 — que são de **consórcio**, não de
+estoque. As regras de estoque são RN-028, RN-029, RN-034 e RN-035, e são essas
+que a onda implementou. As de consórcio ficam para a onda 6.
+
 **Limite declarado:** os fluxos interativos (navegação, edição em tela) **não têm
 teste automatizado**. O que é testável foi separado do desenho e está coberto; o
 desenho depende de verificação à mão. Injeção por pseudo-terminal se mostrou não
@@ -554,19 +613,19 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
 | Venda de peças (balcão) | OK | — | — | Não iniciado |
-| Venda de peças — alerta de estoque mínimo | OK | — | — | Não iniciado |
-| Venda de peças — baixa de estoque | OK | — | — | Não iniciado |
+| Venda de peças — alerta de estoque mínimo | OK | OK | OK | Em implementação — serviço pronto (onda 4) |
+| Venda de peças — baixa de estoque | OK | OK | OK | Em implementação — serviço pronto (onda 4) |
 | Venda de peças — cadastro de cliente em linha | Defeituoso (D-06) | — | — | Não iniciado |
 | Venda de peças — subtotal e total | Parcial (D-17) | — | — | Não iniciado |
 | Reparo de autos — grade de itens | OK | — | — | Não iniciado |
-| Reparo — baixa de estoque | **Ausente** (D-13) | — | — | Não iniciado |
+| Reparo — baixa de estoque | **Ausente** (D-13) | — | — | Preservado ausente — **Q-12 aberta** |
 | Pronta entrega — venda | OK | — | — | Não iniciado |
-| Pronta entrega — baixa de frota | Defeituoso (D-08) | — | — | Não iniciado |
-| Pronta entrega — aviso de último veículo | OK | — | — | Não iniciado |
-| Comissão — venda de peças | **Indefinido** (D-05) | — | — | Não iniciado |
-| Comissão — reparo | **Indefinido** (D-05) | — | — | Não iniciado |
-| Comissão — pronta entrega (1,5%) | Defeituoso (D-07) | — | — | Não iniciado |
-| Comissão — consórcio (0,15%) | OK | — | — | Não iniciado |
+| Pronta entrega — baixa de frota | Defeituoso (D-08) | OK | OK | Em implementação — serviço pronto, sem D-08 |
+| Pronta entrega — aviso de último veículo | OK | OK | OK | Em implementação — serviço pronto (RN-035) |
+| Comissão — venda de peças | **Indefinido** (D-05) | OK | OK | Em implementação — fórmula literal preservada, **Q-10 aberta** |
+| Comissão — reparo | **Indefinido** (D-05) | OK | OK | Em implementação — mesma fórmula, **Q-10 aberta** |
+| Comissão — pronta entrega (1,5%) | Defeituoso (D-07) | OK | OK | Em implementação — serviço pronto, sem D-07 |
+| Comissão — consórcio (0,15%) | OK | OK | OK | Em implementação — serviço pronto (onda 4) |
 
 ### 5.3 Consórcio
 

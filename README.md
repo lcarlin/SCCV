@@ -13,7 +13,7 @@ em CA-Clipper Summer '87 / DOS (1994), para **Harbour + SQLite + Linux**.
 | **D — Migração DBF → SQLite** | ✅ concluída — `make migrate` · 222 registros |
 | **E — Testes de migração** | ✅ concluída — 892 campos, 0 divergências |
 | **F — Infraestrutura Harbour** | ✅ concluída — `bin/sccv` sobe e se apresenta |
-| **G — Implementação dos módulos** | 🔄 ondas 1–3 de 9 — 9 de 19 destinos do menu |
+| **G — Implementação dos módulos** | 🔄 ondas 1–4 de 9 — 9 de 19 destinos do menu |
 | H–J — Validações, regressão, auditoria | não iniciadas |
 
 A migração está pronta e verificada — 185 registros lidos, 222 gravados, 892
@@ -47,6 +47,7 @@ src/
              carregador.prg (D.4/D.5) — carga transacional e transformações
              migrar.prg (D.6) — CLI, idempotência, códigos de saída
              verificador.prg (E) — contagens, somas, campo a campo, FKs
+  services/  comissao.prg (RN-030..032) · estoque.prg (RN-028/029/034/035)
   models/    modelo.prg — motor de cadastro dirigido por descritor
              cliente · funcionario · fornecedor · modelo_veiculo · peca
              · almoxarifado (só o que difere entre eles)
