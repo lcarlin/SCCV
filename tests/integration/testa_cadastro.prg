@@ -31,6 +31,8 @@ PROCEDURE Main()
    TestaFornecedor( pDb )
    TestaModeloVeiculo( pDb )
    TestaExclusao( pDb )
+   TestaPeca( pDb )
+   TestaAlmoxarifado( pDb )
    ConexaoFechar()
 
    ?
@@ -229,6 +231,93 @@ STATIC PROCEDURE TestaExclusao( pDb )
    Vale( "e a mensagem diz onde está preso", ;
          At( "venda(s) de peça", hRes[ "mensagem" ] ) > 0, .T. )
    Vale( "o registro continua visível", ModeloObter( pDb, hD, 1 ) != NIL, .T. )
+
+   RETURN
+
+/*
+ * Onda 3 — peça. Cobre os dois defeitos do legado que este cadastro não
+ * reproduz: D-01 (a alteração corrompia a chave primária) e RN-036 (o nome do
+ * fornecedor era copiado para dentro da peça).
+ */
+STATIC PROCEDURE TestaPeca( pDb )
+
+   LOCAL hD := PecaDescritor(), hVal, hReg, hRes
+
+   ? "== peça (onda 3) =="
+
+   hVal := Valores( hD, { "cod_pec" => 10, "descricao" => "Vela de ignição", ;
+      "qtd_estoque" => 20, "valor_unit_cent" => "12,95", ;
+      "qtd_minima" => 5, "cod_for" => 1 } )
+   Vale( "grava", ModeloGravar( pDb, hD, hVal, .T. )[ "ok" ], .T. )
+   hReg := ModeloObter( pDb, hD, 10 )
+   Vale( "valor unitário em centavos", hReg[ "valor_unit_cent" ], 1295 )
+   Vale( "fornecedor gravado", hReg[ "cod_for" ], 1 )
+
+   /* RN-036: o nome do fornecedor não é coluna da peça; vem por JOIN na view */
+   Vale( "nome do fornecedor vem da view, não de cópia", ;
+         SqlEscalar( pDb, "SELECT nome_fornecedor FROM v_peca WHERE cod_pec = 10" ), ;
+         "Fiat" )
+   Vale( "e peca não tem coluna de nome de fornecedor", ;
+         SqlEscalar( pDb, "SELECT count(*) FROM pragma_table_info('peca')" + ;
+                          " WHERE name LIKE '%nome%'" ), 0 )
+
+   /* D-01 — no legado, alterar uma peça gravava o código do FORNECEDOR no
+      campo de código da PEÇA. Aqui a chave não entra no UPDATE. */
+   hVal := Valores( hD, { "cod_pec" => 10, "descricao" => "Vela alterada", ;
+      "qtd_estoque" => 20, "qtd_minima" => 5, "cod_for" => 1 } )
+   Vale( "altera", ModeloGravar( pDb, hD, hVal, .F. )[ "ok" ], .T. )
+   Vale( "D-01: a chave da peça NÃO vira o código do fornecedor", ;
+         ModeloObter( pDb, hD, 10 ) != NIL, .T. )
+   Vale( "e a peça 1 (código do fornecedor) não foi criada", ;
+         ModeloObter( pDb, hD, 1 ), NIL )
+   Vale( "a descrição, essa sim, mudou", ;
+         ModeloObter( pDb, hD, 10 )[ "descricao" ], "Vela alterada" )
+
+   /* fornecedor inexistente */
+   hRes := ModeloGravar( pDb, hD, Valores( hD, { "cod_pec" => 11, ;
+      "descricao" => "Órfã", "cod_for" => 999 } ), .T. )
+   Vale( "fornecedor inexistente é recusado", hRes[ "ok" ], .F. )
+   Vale( "com mensagem clara", At( "não cadastrado", hRes[ "mensagem" ] ) > 0, .T. )
+   Vale( "sem fornecedor é aceito", ;
+         ModeloGravar( pDb, hD, Valores( hD, { "cod_pec" => 11, ;
+            "descricao" => "Sem fornecedor" } ), .T. )[ "ok" ], .T. )
+   Vale( "e fica NULL", ModeloObter( pDb, hD, 11 )[ "cod_for" ], NIL )
+
+   /* RN-028 — estoque abaixo do mínimo é aviso, não bloqueio (05 §9) */
+   hRes := ModeloGravar( pDb, hD, Valores( hD, { "cod_pec" => 12, ;
+      "descricao" => "Acabando", "qtd_estoque" => 1, "qtd_minima" => 10 } ), .T. )
+   Vale( "estoque abaixo do mínimo GRAVA (RN-028)", hRes[ "ok" ], .T. )
+   Vale( "mas avisa", ValTemAviso( hRes[ "validacao" ] ), .T. )
+
+   RETURN
+
+/*
+ * Onda 3 — almoxarifado. D-14: o índice do legado era construído sobre a
+ * tabela errada, então a verificação de duplicidade nunca encontrava nada.
+ */
+STATIC PROCEDURE TestaAlmoxarifado( pDb )
+
+   LOCAL hD := AlmoxarifadoDescritor(), hVal, hRes
+
+   ? "== almoxarifado (onda 3) =="
+
+   hVal := Valores( hD, { "cod_alm" => 1, "descricao" => "Parafuso M8", ;
+      "qtd_estoque" => 500, "valor_unit_cent" => "0,35", "qtd_minima" => 100 } )
+   Vale( "grava", ModeloGravar( pDb, hD, hVal, .T. )[ "ok" ], .T. )
+   Vale( "valor unitário de centavos baixos", ;
+         ModeloObter( pDb, hD, 1 )[ "valor_unit_cent" ], 35 )
+
+   /* D-14 — no legado esta duplicidade passava despercebida */
+   hRes := ModeloGravar( pDb, hD, Valores( hD, { "cod_alm" => 1, ;
+      "descricao" => "Duplicado" } ), .T. )
+   Vale( "D-14: código duplicado é detectado", hRes[ "ok" ], .F. )
+   Vale( "com mensagem clara", At( "já está em uso", hRes[ "mensagem" ] ) > 0, .T. )
+   Vale( "e o registro original não foi tocado", ;
+         ModeloObter( pDb, hD, 1 )[ "descricao" ], "Parafuso M8" )
+
+   Vale( "próximo código é 2", ModeloProximoCodigo( pDb, hD ), 2 )
+   Vale( "descrição obrigatória", ;
+         ModeloGravar( pDb, hD, Valores( hD, { "cod_alm" => 2 } ), .T. )[ "ok" ], .F. )
 
    RETURN
 

@@ -27,7 +27,8 @@ UI_SRC    := src/ui/tela.prg src/ui/menu.prg src/ui/lookup.prg \
 
 MOD_SRC   := src/models/modelo.prg src/models/cliente.prg \
              src/models/funcionario.prg src/models/fornecedor.prg \
-             src/models/modelo_veiculo.prg
+             src/models/modelo_veiculo.prg src/models/peca.prg \
+             src/models/almoxarifado.prg
 
 VAL_PURA  := src/validation/validacao.prg
 VAL_SRC   := $(VAL_PURA) src/validation/integridade.prg

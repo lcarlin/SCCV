@@ -394,9 +394,9 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 
 | Onda | Módulos | Depende de |
 |---:|---|---|
-| **1** | `ui/` (menu, tela, lookup, formulário, browse) · `validation/` completo | F |
-| **2** | Cadastros nível 0: **cliente**, **funcionário**, **fornecedor**, **modelo_veiculo** (manutenção + consulta) | 1 |
-| **3** | Cadastros nível 1: **peça**, **almoxarifado** (manutenção + consulta) | 2 |
+| **1** ✅ | `ui/` (menu, tela, lookup, formulário, browse) · `validation/` completo | F |
+| **2** ✅ | Cadastros nível 0: **cliente**, **funcionário**, **fornecedor**, **modelo_veiculo** (manutenção + consulta) | 1 |
+| **3** ✅ | Cadastros nível 1: **peça**, **almoxarifado** (manutenção + consulta) | 2 |
 | **4** | `services/comissao.prg` · `services/estoque.prg` | 2, 3 |
 | **5** | Movimento: **venda de peças (balcão)**, **reparo**, **pronta entrega** | 3, 4 |
 | **6** | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
@@ -405,6 +405,94 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 | **9** | Comandos administrativos: `--purgar`, `--backup`, `--restore`, `--verificar` | todos |
 
 Cada módulo entra em "concluído" apenas quando: implementado + validado + coberto por teste + registrado na matriz (§5).
+
+#### Onda 1 — concluída em 2026-08-24
+
+`src/validation/` (101 asserções) e `src/ui/` (52 asserções).
+
+- **A regra de dígito verificador passou a ter uma implementação só.** O
+  normalizador da migração chama a de `validation/`. Duas cópias divergiriam, e
+  um documento seria aceito na tela e recusado na migração.
+- **V-08 ficou em dois níveis.** Não há limiar objetivo entre idade improvável e
+  erro de digitação: erro acima de 130 anos, aviso acima de 110 — o mesmo padrão
+  alerta-com-confirmação de RN-028. Um limiar único ou barraria cadastro
+  legítimo, ou deixaria passar o `1901-01-01` que V-08 cita como evidência.
+- **O `§9` de `05` é tão normativo quanto o `§8`** e está coberto por teste: CPF,
+  CNPJ, telefone, endereço, UF e data de venda **não** podem virar obrigatórios.
+- **O lookup retorna o código** (D-02), em vez de preencher a variável do
+  chamador por macro como `TABELA()`/`FUNDB()` faziam.
+
+#### Onda 2 — concluída em 2026-08-24
+
+Cadastros de nível 0, com manutenção e consulta. 63 asserções em
+`tests/integration/testa_cadastro.prg`. **7 dos 19 destinos do menu ligados.**
+
+**Um motor, não quatro cópias.** O legado tinha `CVMTCLI`, `CVMTFUNC`, `CVMTFOR`
+e `CVMTFRO` como quase-cópias, e é dessa duplicação que vêm defeitos como D-01: a
+regra evolui num arquivo e não nos outros, e nada declara que deveriam ser iguais.
+`models/modelo.prg` concentra o SQL e a mecânica, dirigido por descritor; cada
+entidade traz só o que difere; `ui/cadastro.prg` é uma tela só.
+
+Decisões desta onda:
+
+- **Código de registro excluído não é reciclado.** `ModeloProximoCodigo` usa
+  `MAX` sobre a tabela, incluindo excluídos. O legado usava `MAX` com
+  `SET DELETED ON`, e foi assim que a numeração colidiu em RN-015.
+- **Exclusão lógica confere dependências antes** (V-17). As FKs do schema não
+  bastam: `excluido = 1` não é `DELETE`, e o SQLite não tem o que barrar.
+- **Quem valida é o modelo, não o formulário.** A tela só coleta, para que a
+  regra seja a mesma vindo da tela ou de qualquer outro caminho.
+- **O par coluna/`*_original` vale também na digitação** (V-03).
+
+**Dois defeitos que só apareceram executando**, ambos corrigidos em commit
+próprio:
+
+1. `tela.prg` usava `HB_B_SINGLE_UNI` sem incluir `box.ch`. O compilador aceita
+   — identificador desconhecido vira busca de variável em tempo de execução —
+   então compilava limpo e quebrava ao desenhar a primeira caixa. O menu subia,
+   mas qualquer submenu, lookup ou cadastro derrubava a interface.
+2. `SqlExecBind()` mandava qualquer tipo não previsto para `sqlite3_bind_text()`,
+   que aborta o processo. Agora cada tipo é tratado e o que não é gravável vira
+   erro com mensagem.
+
+#### Onda 3 — concluída em 2026-08-24
+
+Cadastros de nível 1: peça e almoxarifado. O motor da onda 2 foi reusado sem
+alteração — os dois entraram como descritor, e o teste subiu de 63 para 85
+asserções. **9 dos 19 destinos do menu ligados.**
+
+O interesse desta onda está nos dois defeitos do legado que ela **não**
+reproduz, ambos já classificados como `[CORREÇÃO]`:
+
+- **D-01** — `CVMTPEC.PRG:73` fazia `MCODPEC = CODFOR` no caminho de alteração,
+  e a linha 135 gravava isso de volta em `CODPEC`: alterar uma peça escrevia o
+  código do **fornecedor** no campo de código da **peça**, corrompendo a chave
+  primária. Aqui a chave não entra no `UPDATE` — só no `WHERE`. Não é precaução
+  contra o defeito antigo: reatribuir a PK numa alteração não faz sentido em
+  lugar nenhum. Coberto por asserção: depois de alterar a peça 10 com
+  fornecedor 1, a peça 10 continua existindo e a peça 1 não foi criada.
+- **D-14** — o índice `CVIALM1` era criado sobre `CVALMOX` (código `C(6)`) e
+  usado sobre `CVBALMOX` (código `N(6)`). `SEEK` numérico contra índice de
+  caractere nunca encontra, então o cadastro de almoxarifado provavelmente
+  sempre tratou todo código como novo, sem detectar duplicata. Não houve o que
+  corrigir no código: o defeito era estrutural e some com o modelo relacional.
+  Coberto por asserção: código duplicado agora é recusado.
+
+E uma regra que **continua** como no legado: estoque abaixo do mínimo é
+**aviso com confirmação**, não bloqueio (RN-028, `05` §9). O cadastro grava e
+avisa.
+
+`RN-036` — o nome do fornecedor era uma coluna copiada dentro da peça
+(`NOMFOR`). Não existe mais: `v_peca` traz `nome_fornecedor` por JOIN. Cadastro
+não tem valor histórico a preservar, ao contrário do movimento, onde o snapshot
+é deliberado (D-19).
+
+**Limite declarado:** os fluxos interativos (navegação, edição em tela) **não têm
+teste automatizado**. O que é testável foi separado do desenho e está coberto; o
+desenho depende de verificação à mão. Injeção por pseudo-terminal se mostrou não
+confiável (um ESC isolado vindo por pipe chega ao GT como `K_RIGHT`);
+`hb_keyPut()` funciona — foi ela que encontrou o defeito do `box.ch` — mas o
+arnês não foi fechado.
 
 ### FASE H — Validações  *(paralela às ondas 1–3 da FASE G)*
 
@@ -443,21 +531,21 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
-| Cliente — inclusão | OK | — | — | Não iniciado |
-| Cliente — alteração | OK | — | — | Não iniciado |
-| Cliente — exclusão lógica | OK | — | — | Não iniciado |
-| Cliente — consulta geral | OK | — | — | Não iniciado |
-| Cliente — consulta por código | OK | — | — | Não iniciado |
-| Cliente — tabela de códigos (lookup) | OK | — | — | Não iniciado |
-| Funcionário — inclusão/alteração/exclusão | OK | — | — | Não iniciado |
-| Funcionário — consulta | OK | — | — | Não iniciado |
-| Fornecedor — inclusão/alteração/exclusão | OK | — | — | Não iniciado |
-| Fornecedor — observações (memo) | OK | — | — | Não iniciado |
-| Fornecedor — consulta | OK | — | — | Não iniciado |
-| Peça — inclusão/alteração/exclusão | OK¹ | — | — | Não iniciado |
-| Almoxarifado — inclusão/alteração/exclusão | OK² | — | — | Não iniciado |
-| Frota — inclusão/alteração/exclusão | OK | — | — | Não iniciado |
-| Frota — faixa de chassi | OK | — | — | Não iniciado |
+| Cliente — inclusão | OK | OK | OK | **Concluído** |
+| Cliente — alteração | OK | OK | OK | **Concluído** |
+| Cliente — exclusão lógica | OK | OK | OK | **Concluído** — agora confere dependências (V-17) |
+| Cliente — consulta geral | OK | OK | OK | **Concluído** |
+| Cliente — consulta por código | OK | OK | OK | **Concluído** |
+| Cliente — tabela de códigos (lookup) | OK | OK | OK | **Concluído** — retorna o código (D-02) |
+| Funcionário — inclusão/alteração/exclusão | OK | OK | OK | **Concluído** |
+| Funcionário — consulta | OK | OK | OK | **Concluído** |
+| Fornecedor — inclusão/alteração/exclusão | OK | OK | OK | **Concluído** |
+| Fornecedor — observações (memo) | OK | OK | OK | **Concluído** — `TEXT`, sem `.DBT` |
+| Fornecedor — consulta | OK | OK | OK | **Concluído** |
+| Peça — inclusão/alteração/exclusão | OK¹ | OK | OK | **Concluído** — sem D-01 |
+| Almoxarifado — inclusão/alteração/exclusão | OK² | OK | OK | **Concluído** — sem D-14 |
+| Frota — inclusão/alteração/exclusão | OK | OK | OK | **Concluído** |
+| Frota — faixa de chassi | OK | OK | OK | **Concluído** — coerência exigida (V-18) |
 
 ¹ com o defeito D-01 · ² com o índice incompatível D-14
 

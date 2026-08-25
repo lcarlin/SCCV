@@ -13,12 +13,16 @@ em CA-Clipper Summer '87 / DOS (1994), para **Harbour + SQLite + Linux**.
 | **D — Migração DBF → SQLite** | ✅ concluída — `make migrate` · 222 registros |
 | **E — Testes de migração** | ✅ concluída — 892 campos, 0 divergências |
 | **F — Infraestrutura Harbour** | ✅ concluída — `bin/sccv` sobe e se apresenta |
-| **G — Implementação dos módulos** | próxima — 0 de 68 |
+| **G — Implementação dos módulos** | 🔄 ondas 1–3 de 9 — 9 de 19 destinos do menu |
 | H–J — Validações, regressão, auditoria | não iniciadas |
 
-**0 de 68 funcionalidades implementadas.** A migração está pronta e verificada —
-185 registros lidos, 222 gravados, 892 campos conferidos um a um sem divergência,
-140 inconsistências documentadas. A aplicação em si ainda não foi escrita.
+A migração está pronta e verificada — 185 registros lidos, 222 gravados, 892
+campos conferidos um a um sem divergência, 140 inconsistências documentadas.
+
+A aplicação já sobe: `bin/sccv` abre o menu e os **seis cadastros** (cliente,
+funcionário, fornecedor, frota, peça, almoxarifado) funcionam com inclusão,
+alteração, exclusão lógica e consulta. Movimento, consórcio e relatórios são as
+ondas 4 a 9 da FASE G.
 Ver a auditoria completa em [`docs/10-PLANO-IMPLEMENTACAO.md`](docs/10-PLANO-IMPLEMENTACAO.md) §6.
 
 > Este README será substituído pelo README final (briefing §29) quando houver
@@ -43,6 +47,10 @@ src/
              carregador.prg (D.4/D.5) — carga transacional e transformações
              migrar.prg (D.6) — CLI, idempotência, códigos de saída
              verificador.prg (E) — contagens, somas, campo a campo, FKs
+  models/    modelo.prg — motor de cadastro dirigido por descritor
+             cliente · funcionario · fornecedor · modelo_veiculo · peca
+             · almoxarifado (só o que difere entre eles)
+  validation/ validacao.prg (V-01..V-19) · integridade.prg (V-13, V-17)
 tests/
   migration/ testa_extrator.prg — aceite da D.1 contra as contagens da FASE A
              testa_normalizador.prg — aceite da D.2, 100 asserções
