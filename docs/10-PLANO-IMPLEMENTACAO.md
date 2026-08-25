@@ -812,7 +812,7 @@ o que `$` aceitava) e **V-15** (saldo negativo deixa de ser possível). A quarta
 **D-27**, é a única que torna mais restritiva uma operação corrente — vender
 abaixo de zero.
 
-### FASE I — Regressão  *(pré-requisito: G, H)*
+### FASE I — Regressão — **CONCLUÍDA** (2026-08-25)
 
 | # | Teste | Método |
 |---|---|---|
@@ -829,7 +829,52 @@ abaixo de zero.
 
 **Massa de teste: os próprios dados de 1994** (briefing §21).
 
-**Divergências esperadas e aceitas:** as 25 de `09-DIVERGENCIAS-MODERNIZACAO.md`. Qualquer divergência **não listada** é falha de regressão.
+**Divergências esperadas e aceitas:** as **29** de
+`09-DIVERGENCIAS-MODERNIZACAO.md` — eram 27 quando este plano foi escrito; D-28
+(sequencial de grupo) e D-29 (placa de veículo) foram acrescentadas durante a
+implementação. Qualquer divergência **não listada** é falha de regressão.
+
+#### Resultado
+
+`tests/integration/testa_regressao.prg` — **94 asserções, 0 falhas**, sobre a
+massa de 1994 migrada do zero a cada execução.
+
+**O QUE ESTA REGRESSÃO É, E O QUE NÃO É.** Não é um teste A/B contra o sistema
+antigo: `SCCV.EXE` é um binário DOS de 1994 e não roda neste ambiente. A
+comparação é contra o comportamento **documentado** — as 42 regras de `03` e as
+29 divergências de `09`, extraídas do código legado com citação de arquivo e
+linha e conferidas contra os dados.
+
+Isso muda o que uma aprovação aqui significa, e a distinção precisa estar dita:
+não prova que os dois sistemas se comportam igual diante de um operador; prova
+que o sistema novo se comporta como a engenharia reversa disse que o antigo se
+comportava, e que cada afastamento é um dos declarados.
+
+| # | O que foi verificado |
+|---|---|
+| I.1 | A massa chega inteira: 22 clientes, 10 funcionários, 3 fornecedores, 4 peças, 5 modelos, 23 vendas de veículo, 75 itens, 5 cotas — com valores literais conferidos |
+| I.3 | Exclusão é marca lógica: some da view, do lookup e do relatório; permanece na tabela |
+| I.4 | Consultas na ordem por código, como os `.NTX`; o filtro RN-040 particiona os 22 clientes |
+| I.5 | As três fórmulas de comissão, literais — inclusive a anômala RN-030. Se alguém "consertar" sem responder Q-10, isto falha |
+| I.7 | Os dez relatórios emitem sobre a massa real; R-09, que era inoperante, lista as 3 cotas fechadas |
+| I.8 | Código 0, código máximo, campos vazios, estoque zero, tabela vazia |
+| I.9 | Os erros conhecidos **estão lá**, com a classificação prevista: 140 inconsistências, `cpf` nulo nos 22 com original preservado, `'**'` em `*_legado`, datas de 1901 importadas como estão |
+| I.10 | Os quatro fluxos ponta a ponta: balcão, reparo, pronta entrega e adesão a consórcio |
+| — | **Auditoria das divergências:** 18 das 29 verificadas por asserção direta; as demais são estruturais e já cobertas pelo schema |
+
+**I.2 e I.6 não têm asserção própria aqui** porque já estão inteiramente cobertos
+por suítes anteriores: alteração de cadastro em `testa_cadastro` (63 asserções) e
+validações em `testa_validacao` (101) e `testa_fase_h` (30). Repeti-los seria
+duplicar cobertura, não aumentá-la.
+
+**Dois defeitos do teste, encontrados escrevendo-o** — e ambos do tipo que passa
+despercebido:
+
+1. `migracao_inconsistencia.execucao_id` é `NOT NULL` com FK. Passar `NIL`
+   fazia `IncGravarSqlite()` gravar **zero linhas, em silêncio** — a função
+   conta apenas os inserts que retornaram 0, e nenhum retornou.
+2. `SqlUltimoId()` lido **depois** da carga devolve o último id inserido pela
+   migração, não o da linha de execução. O id precisa ser capturado na hora.
 
 ### FASE J — Auditoria final  *(pré-requisito: I)*
 
@@ -1097,24 +1142,26 @@ O projeto só será declarado concluído quando **todos** os 9 critérios forem 
 
 ## 11. Próximo passo
 
-**FASES A a H concluídas.** 16 suítes de teste, todas passando.
+**FASES A a I concluídas.** 17 suítes de teste, todas passando.
 
 | | |
 |---|---|
 | Destinos do menu | 19 de 20 |
 | Validações V-01..V-20 | verificadas nominalmente |
+| Regressão | 94 asserções sobre a massa de 1994 |
 | Matriz §5 | 12 linhas pendentes |
 
-**Próxima: FASE I — regressão.** É a fase que compara o comportamento do sistema
-novo com o do legado sobre a mesma massa de dados. Tem uma dificuldade própria
-que as anteriores não tinham: **o legado não roda aqui**. `SCCV.EXE` é um
-binário DOS de 1994, e não há DOSBox nem intenção de instalá-lo. A comparação,
-então, não é "executar os dois e conferir" — é confrontar o comportamento
-implementado com o comportamento **documentado** nas 40 regras de negócio, e
-verificar que cada divergência D-01..D-29 se manifesta como o documento diz.
+**Próxima e última: FASE J — auditoria final.** É a revisão completa contra o
+briefing §31 e §32: conferir que cada critério de conclusão está atendido, que a
+matriz de compatibilidade reflete o estado real, que as questões abertas estão
+registradas e que nada foi dado por concluído só porque compila.
 
-Isso torna a FASE I uma auditoria de conformidade, não um teste A/B. A distinção
-importa e precisa estar dita: onde o legado não pode ser executado, a fonte da
-verdade é a engenharia reversa das FASES A e B, e é contra ela que se compara.
+Há duas coisas que a auditoria vai ter de encarar de frente, e é melhor
+antecipá-las:
 
-Depois: **FASE J — auditoria final**.
+1. **Os fluxos interativos não têm teste automatizado.** Toda a regra está
+   coberta, porque foi deliberadamente separada do desenho — mas a navegação e a
+   edição em tela dependem de verificação à mão.
+2. **Q-10 e Q-12 continuam abertas.** Não bloqueiam nada, estão isoladas em uma
+   função cada, mas são decisões de negócio pendentes e a auditoria precisa
+   dizê-lo.

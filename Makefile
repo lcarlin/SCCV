@@ -55,7 +55,8 @@ MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
 TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao \
              testa_verificacao testa_infra testa_validacao testa_ui \
              testa_cadastro testa_servicos testa_venda testa_consorcio \
-             testa_relatorios testa_graficos testa_admin testa_fase_h
+             testa_relatorios testa_graficos testa_admin testa_fase_h \
+             testa_regressao
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda run install desinstalar
 
@@ -164,6 +165,12 @@ $(BIN)/testa_admin: tests/integration/testa_admin.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_fase_h: tests/integration/testa_fase_h.prg $(APP_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+# a regressão roda sobre a massa de 1994: precisa do migrador junto
+$(BIN)/testa_regressao: tests/integration/testa_regressao.prg $(APP_SRC) \
+        src/migration/carregador.prg src/migration/extrator.prg \
+        src/migration/normalizador.prg src/migration/inconsistencia.prg | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # --- utilidades -------------------------------------------------------
