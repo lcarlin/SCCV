@@ -414,6 +414,35 @@
 
 ---
 
+## D-28 — Número do grupo de consórcio só é consumido na gravação
+
+**`[CORREÇÃO]`**
+
+| | |
+|---|---|
+| **Local** | `CVMTCON.PRG:44-46, 71` |
+| **Legado** | `SAVE TO cvmgrupo ALL LIKE mcodgru` executa **antes** da confirmação "Cadastrar Consorciado". Se o operador desistir da adesão, o número já foi consumido e se perde |
+| **Novo** | O sequencial só avança dentro da transação que grava a cota. Desistir não consome número |
+| **Justificativa** | É consequência da ordem das instruções, não regra: nada no sistema atribui significado a buracos na numeração de grupos. RN-013 registra o comportamento como [INFERIDA], sem decidi-lo |
+| **Impacto nos dados** | Nenhum. O sequencial migrado (`0`) já divergia do maior grupo existente (`1`) — sintoma do mesmo descontrole, tratado em `08` §6.4 |
+| **Regra relacionada** | RN-013 |
+
+---
+
+## D-29 — Placa de veículo: registrada como ausência, não implementada
+
+**`[REGISTRO]`**
+
+| | |
+|---|---|
+| **Legado** | **Não existe** campo de placa em nenhum dos 23 DBFs. A frota identifica veículo por `CODCAR`, `DESCAR` e faixa de chassi (`CHASSI`/`CHASDO`); o orçamento de reparo (`CVREPAR`) não identifica o carro de forma alguma |
+| **Cuidado** | Os fontes mencionam "placa" nove vezes, mas trata-se de **placa de vídeo** — `bc_cplaca()` e `bc_inictr()` são da biblioteca gráfica BCVGA, usadas em `CVGRAFRO`, `CVGRAPEC` e `CVTEABE`. As demais ocorrências em `grep` são falso positivo de `RE-PLAC-E` |
+| **Novo** | Mantido ausente, por decisão do responsável em 2026-08-25 |
+| **Justificativa** | O sistema modela **modelo de veículo com quantidade em estoque**, não veículo individual — 487 unidades em 5 modelos, nenhuma com identidade própria. Coerente para venda de zero-quilômetro, em que a placa só existe após o emplacamento. Acrescentar placa seria funcionalidade nova, não adaptação |
+| **Se vier a ser pedido** | O caminho mínimo é uma coluna `placa` em `orcamento_reparo` (o reparo é o único ponto em que o carro do cliente importa) mais um validador dos três formatos em uso: `LL-NNNN`, `LLL-NNNN` e Mercosul `LLLNLNN`. Criar uma tabela de veículos individuais exigiria **inventar 487 registros** sem chassi nem placa reais, o que o briefing §2 proíbe |
+
+---
+
 ## Matriz de rastreabilidade
 
 | Divergência | Categoria | Regra/Validação | Documento de origem |

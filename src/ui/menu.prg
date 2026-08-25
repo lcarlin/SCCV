@@ -39,7 +39,7 @@ FUNCTION MenuDefinicao()
          { "titulo" => "Venda de peças"   , "acao" => "venda.pecas"  }, ;
          { "titulo" => "Reparo de autos"  , "acao" => "venda.reparo"  }, ;
          { "titulo" => "Pronta entrega"   , "acao" => "venda.pronta"  }, ;
-         { "titulo" => "Consórcio"        , "acao" => NIL }, ;
+         { "titulo" => "Consórcio"        , "acao" => "consorcio" }, ;
          { "titulo" => "Comissões"        , "acao" => NIL } } }, ;
       { "titulo" => "Estoques", "coluna" => 63, "itens" => { ;
          { "titulo" => "Peças"        , "acao" => "peca.manutencao"         }, ;

@@ -399,7 +399,7 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 | **3** ✅ | Cadastros nível 1: **peça**, **almoxarifado** (manutenção + consulta) | 2 |
 | **4** ✅ | `services/comissao.prg` · `services/estoque.prg` | 2, 3 |
 | **5** ✅ | Movimento: **venda de peças (balcão)**, **reparo**, **pronta entrega** | 3, 4 |
-| **6** | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
+| **6** ✅ | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
 | **7** | Relatórios R-01..R-10 | 2–6 |
 | **8** | Gráficos R-11, R-12 (barras + CSV) | 5 |
 | **9** | Comandos administrativos: `--purgar`, `--backup`, `--restore`, `--verificar` | todos |
@@ -592,6 +592,45 @@ com erro de símbolo indefinido no link. Nomes de fonte precisam ser únicos no
 projeto inteiro. O modelo foi dividido em `venda_peca.prg` e
 `venda_veiculo.prg`, o que também alinha com a estrutura de §2.
 
+#### Onda 6 — concluída em 2026-08-25
+
+Consórcio: adesão, fechamento de grupo, baixa de prestações e contemplação.
+70 asserções em `tests/integration/testa_consorcio.prg`. **13 dos 19 destinos.**
+
+É a área que mais acumulou defeito no legado — dos cinco valores de `NUMMES` no
+acervo, três são inválidos (`**`, `-2`, `-3`), todos consequência de RN-020
+subtrair sem piso em zero.
+
+**Corrigidos:**
+
+- **D-10** — número do participante é `MAX + 1` sobre o grupo, incluindo
+  excluídos. O legado usava `COUNT` com `SET DELETED ON`, que não conta
+  excluídos: depois de fechar um grupo a numeração reiniciava em 1. Está nos
+  dados — `CVBGRUPO` tinha os participantes 1 e 2 do grupo 1 enquanto `CVBGRUCO`
+  já tinha 1, 2 e 3 do mesmo grupo.
+- **D-11** — baixar mais prestações do que o saldo é recusado. Saldo negativo de
+  prestações não significa nada, mesma natureza de D-27 para estoque.
+- **D-12** — o fechamento é um `UPDATE` numa transação, não um laço movendo N
+  registros entre duas tabelas sem transação.
+- **D-28 (nova)** — o número do grupo só é consumido na gravação. No legado o
+  `SAVE TO cvmgrupo` vinha antes da confirmação, e desistir queimava o número.
+
+**Preservados:**
+
+- **RN-016 / Q-09** — a prestação é o valor **cheio** do carro, não dividido
+  pelo número de meses. Anômalo, mas o legado não diz se é intenção ou defeito.
+- **RN-023** — se o modelo estiver esgotado na contemplação, a unidade não é
+  baixada, o aviso aparece **e a marca de sorteado permanece**. No legado o
+  `REPLACE` de `SORT` vinha antes do teste de estoque e não havia reversão. O
+  resultado da função diz explicitamente que a marca foi gravada sem baixa.
+- **RN-021** — a quitação testa `= 0` exato, como no legado.
+- **RN-019** — `sorteado` e `quitado` agora são inicializados **explicitamente**;
+  no legado ficavam `.F.` por acidente do `APPEND BLANK`.
+
+**Cotas herdadas da migração com saldo inválido** (`parcelas_restantes` nulo e o
+bruto em `*_legado`) recusam baixa de prestações com mensagem que explica a
+origem e mostra o valor original. Sem saldo conhecido não há o que subtrair.
+
 **Limite declarado:** os fluxos interativos (navegação, edição em tela) **não têm
 teste automatizado**. O que é testável foi separado do desenho e está coberto; o
 desenho depende de verificação à mão. Injeção por pseudo-terminal se mostrou não
@@ -677,7 +716,7 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
-| Adesão — grupo novo | OK | — | — | Não iniciado |
+| Adesão — grupo novo | OK | OK | OK | **Concluído** — nº só consumido na gravação (D-28) |
 | Adesão — grupo existente | OK | — | — | Não iniciado |
 | Sequencial de grupo (`.MEM` → tabela) | OK | — | — | Não iniciado |
 | Numeração do participante | Defeituoso (D-10) | — | — | Não iniciado |

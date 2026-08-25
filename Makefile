@@ -24,16 +24,17 @@ DESTINO   ?= sccv.db
 # validacao.prg é pura (só lógica); integridade.prg consulta o banco
 UI_SRC    := src/ui/tela.prg src/ui/menu.prg src/ui/lookup.prg \
              src/ui/formulario.prg src/ui/browse.prg src/ui/cadastro.prg \
-             src/ui/movimento.prg
+             src/ui/movimento.prg src/ui/tela_consorcio.prg
 
 SRV_SRC   := src/services/comissao.prg src/services/estoque.prg \
-             src/services/venda.prg
+             src/services/venda.prg src/services/consorcio.prg
 
 MOD_SRC   := src/models/modelo.prg src/models/cliente.prg \
              src/models/funcionario.prg src/models/fornecedor.prg \
              src/models/modelo_veiculo.prg src/models/peca.prg \
              src/models/almoxarifado.prg \
-             src/models/venda_peca.prg src/models/venda_veiculo.prg
+             src/models/venda_peca.prg src/models/venda_veiculo.prg \
+             src/models/consorcio_cota.prg
 
 VAL_PURA  := src/validation/validacao.prg
 VAL_SRC   := $(VAL_PURA) src/validation/integridade.prg
@@ -48,7 +49,7 @@ MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
 
 TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao \
              testa_verificacao testa_infra testa_validacao testa_ui \
-             testa_cadastro testa_servicos testa_venda
+             testa_cadastro testa_servicos testa_venda testa_consorcio
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda run install desinstalar
 
@@ -142,6 +143,9 @@ $(BIN)/testa_servicos: tests/unit/testa_servicos.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_venda: tests/integration/testa_venda.prg $(APP_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+$(BIN)/testa_consorcio: tests/integration/testa_consorcio.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # --- utilidades -------------------------------------------------------
