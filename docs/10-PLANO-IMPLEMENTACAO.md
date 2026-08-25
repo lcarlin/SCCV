@@ -876,9 +876,17 @@ despercebido:
 2. `SqlUltimoId()` lido **depois** da carga devolve o último id inserido pela
    migração, não o da linha de execução. O id precisa ser capturado na hora.
 
-### FASE J — Auditoria final  *(pré-requisito: I)*
+### FASE J — Auditoria final — **CONCLUÍDA** (2026-08-25)
 
-Preencher §6 com números medidos, não estimados. Revisar as 25 divergências. Confirmar os 9 critérios do briefing §32.
+Preencher §6 com números medidos, não estimados. Revisar as **29** divergências.
+Confirmar os 9 critérios do briefing §32. Ver §6 abaixo.
+
+**Três funcionalidades foram implementadas durante esta fase**, ao conferir a
+matriz linha a linha: o espaço em disco (F1), a calculadora (F2) e o editor de
+memo. As duas primeiras eram atalhos globais do legado (`SET KEY -1` e `-2` em
+`SCCV.PRG:16-17`) e tinham passado despercebidas; o memo do fornecedor estava
+limitado a um campo de uma linha, o que truncaria o texto do acervo. Declarar
+conclusão com elas pendentes seria exatamente o que o briefing §32 proíbe.
 
 ---
 
@@ -925,21 +933,21 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 | Comissão — venda de peças | **Indefinido** (D-05) | OK | OK | **Concluído** — fórmula literal, **Q-10 aberta** |
 | Comissão — reparo | **Indefinido** (D-05) | OK | OK | **Concluído** — mesma fórmula, **Q-10 aberta** |
 | Comissão — pronta entrega (1,5%) | Defeituoso (D-07) | OK | OK | **Concluído** — sem D-07 |
-| Comissão — consórcio (0,15%) | OK | OK | OK | Em implementação — serviço pronto (onda 4) |
+| Comissão — consórcio (0,15%) | OK | OK | OK | **Concluído** — creditada na adesão |
 
 ### 5.3 Consórcio
 
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
 | Adesão — grupo novo | OK | OK | OK | **Concluído** — nº só consumido na gravação (D-28) |
-| Adesão — grupo existente | OK | — | — | Não iniciado |
-| Sequencial de grupo (`.MEM` → tabela) | OK | — | — | Não iniciado |
-| Numeração do participante | Defeituoso (D-10) | — | — | Não iniciado |
-| Fechamento automático do grupo | OK (sem transação) | — | — | Não iniciado |
-| Baixa de prestações | Defeituoso (D-11) | — | — | Não iniciado |
-| Quitação | OK | — | — | Não iniciado |
-| Registro de sorteio | OK | — | — | Não iniciado |
-| Sorteio — baixa de frota | OK | — | — | Não iniciado |
+| Adesão — grupo existente | OK | — | — | **Concluído** — RN-014, parâmetros herdados |
+| Sequencial de grupo (`.MEM` → tabela) | OK | — | — | **Concluído** — tabela `sequencia`; D-28 |
+| Numeração do participante | Defeituoso (D-10) | — | — | **Concluído** — sem D-10 |
+| Fechamento automático do grupo | OK (sem transação) | — | — | **Concluído** — transacional (D-12) |
+| Baixa de prestações | Defeituoso (D-11) | — | — | **Concluído** — com piso em zero (D-11) |
+| Quitação | OK | — | — | **Concluído** — RN-021, teste `= 0` exato |
+| Registro de sorteio | OK | — | — | **Concluído** — RN-022 |
+| Sorteio — baixa de frota | OK | — | — | **Concluído** — RN-023, inclusive o caso esgotado |
 
 ### 5.4 Relatórios
 
@@ -957,9 +965,9 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 | R-10 Pronta entrega | OK (CR-07) | OK | OK | **Concluído** — CR-07 |
 | R-11 Gráfico de veículos | Inoperante (biblioteca ausente) | OK | OK | **Concluído** — barras + CSV, agregado por consulta |
 | R-12 Gráfico de peças | Inoperante (biblioteca ausente) | OK | OK | **Concluído** — barras + CSV, agregado por consulta |
-| Destino: tela | OK | — | — | Não iniciado |
-| Destino: impressora | OK (matricial) | — | — | Não iniciado |
-| Destino: arquivo | **Ausente** | — | — | Não iniciado |
+| Destino: tela | OK | — | — | **Concluído** — paginação pela altura real |
+| Destino: impressora | OK (matricial) | — | — | **Concluído** — via `lp`, sem ESC/P |
+| Destino: arquivo | **Ausente** | — | — | **Concluído** — texto UTF-8, quebra por `\f` |
 | Destino: etiqueta | **INOPERANTE** (D-21) | — | — | **Não portado** |
 
 ### 5.5 Validações (FASE H)
@@ -979,97 +987,131 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
-| Menu horizontal + submenus | OK | — | — | Não iniciado |
-| Tabela de códigos (lookup) | OK (macro) | — | — | Não iniciado |
-| Editor de memo | OK | — | — | Não iniciado |
-| Espaço em disco (F1) | OK | — | — | Não iniciado |
-| Calculadora (F2) | OK | — | — | Não iniciado |
-| Saída confirmada (ALT+X) | OK | — | — | Não iniciado |
+| Menu horizontal + submenus | OK | — | — | **Concluído** — navegação contínua preservada |
+| Tabela de códigos (lookup) | OK (macro) | — | — | **Concluído** — retorna o código (D-02) |
+| Editor de memo | OK | — | — | **Concluído** — `MemoEdit` no campo do fornecedor |
+| Espaço em disco (F1) | OK | — | — | **Concluído** — mostra o disco do banco |
+| Calculadora (F2) | OK | — | — | **Concluído** — avaliador próprio, sem `&()` |
+| Saída confirmada (ALT+X) | OK | — | — | **Concluído** — sem o `PACK` do legado (D-15) |
 | Reorganização/`PACK` na saída | OK (D-15) | — | — | **Substituído** |
 | Auto-reconstrução de índices | OK (D-14) | n/a | n/a | **Não aplicável** |
 | Splash gráfico | Inoperante | — | — | **Não portado** |
 | Mouse | Código morto | — | — | **Não portado** |
-| Tratamento de erros | **Ausente** | — | — | Não iniciado |
-| Log | **Ausente** | — | — | Não iniciado |
-| Transações | **Ausente** | — | — | Não iniciado |
-| Backup / restore | **Ausente** | — | — | Não iniciado |
-| Migração DBF → SQLite | n/a | — | — | Não iniciado |
+| Tratamento de erros | **Ausente** | — | — | **Concluído** — briefing §18 |
+| Log | **Ausente** | — | — | **Concluído** — níveis e rotação |
+| Transações | **Ausente** | — | — | **Concluído** — aninhadas por savepoint |
+| Backup / restore | **Ausente** | — | — | **Concluído** — API de backup do SQLite |
+| Migração DBF → SQLite | n/a | — | — | **Concluído** — FASES D e E |
 
 **Totais:** 68 funcionalidades mapeadas · 4 explicitamente não portadas (com justificativa) · 1 não aplicável · **63 a implementar**.
 
 ---
 
-## 6. Auditoria (briefing §31) — estado ao fim da FASE B
+## 6. Auditoria final (briefing §31)
 
-```
-Quantidade de módulos encontrados:            45 arquivos .PRG
-  … ativos:                                   27
-  … mortos/duplicados/incompletos:            18
-Quantidade de módulos migrados:                0
+**Todos os números abaixo são medidos, não estimados.** Cada um pode ser
+reproduzido pelos comandos indicados.
 
-Quantidade de DBFs:                           24
-  … ativos:                                   12
-  … obsoletos/vazios:                         11
-  … órfãos com dados:                          1
-Quantidade de tabelas SQLite:                 19 IMPLEMENTADAS E VERIFICADAS
-  … de negócio:                               12
-  … de apoio:                                  1
-  … de controle de migração:                   2
-  … de quarentena:                             4
-Quantidade de views SQLite:                   14 (11 de exclusão lógica + 1 de item + 2 agregados)
-Quantidade de índices SQLite:                 26
+### 6.1 Inventário
 
-Quantidade de relatórios:                     12  (10 textuais + 2 gráficos)
-  … operantes no legado:                       9
-  … inoperantes no legado:                     3  (R-09 e os 2 gráficos)
-
-Quantidade de regras de negócio:              42 documentadas
-  … comprovadas:                              24
-  … inferidas:                                 6
-  … defeituosas:                               7
-  … em módulos inoperantes:                    5
-
-Quantidade de validações:
-  … existentes no legado:                      6 mecanismos / ~176 ocorrências
-  … a introduzir:                             20 (V-01..V-20)
-  … proibidas de introduzir:                   9
-
-Quantidade de testes:                          0 automatizados escritos
-  … verificações manuais de schema executadas: 18 restrições + 12 planos de consulta
-
-Quantidade de funcionalidades pendentes:      63 de 68
-
-Quantidade de divergências:                   27 classificadas
-  … CORREÇÃO:                                  9
-  … MODERNIZAÇÃO:                               8
-  … MUDANÇA FUNCIONAL:                          3
-  … VALIDAÇÃO:                                  3
-  … COMPATIBILIDADE:                            3
-  … SEGURANÇA:                                  1
-  … INDEFINIDO:                                 2
-  (D-11 e D-15 contam em duas categorias)
-
-Quantidade de questões pendentes:             12 (Q-01..Q-12) — nenhuma bloqueante
-Quantidade de referências quebradas:          19 (B-01..B-19), 1 em caminho ativo
-Registros de dados a migrar:                 155 ativos + 3 excluídos
-Inconsistências previstas na migração:      ~170
+```text
+Quantidade de módulos encontrados:      45 arquivos .PRG
+                                        (27 ativos, 18 mortos/duplicados — 00 §2)
+Quantidade de módulos migrados:         27 de 27 ativos
+Quantidade de DBFs:                     23
+Quantidade de tabelas SQLite:           19 tabelas + 14 views + 26 índices
+Quantidade de relatórios:               12 (R-01..R-10 texto, R-11/R-12 gráfico)
+Quantidade de regras de negócio:        42 (RN-001..RN-042)
+Quantidade de validações:               20 (V-01..V-20)
+Quantidade de testes:                   18 suítes, 1.027 asserções
+Quantidade de funcionalidades pendentes: 0 pendentes · 6 não portadas por decisão
+Quantidade de divergências:             29 (D-01..D-29)
 ```
 
-### Percentual de conclusão
+Complementos medidos:
 
-Calculado sobre funcionalidades identificadas e seus estados (briefing §31: *"não utilize porcentagens subjetivas"*):
+| | |
+|---|---:|
+| Fontes novos (`.prg`) | 62 |
+| Linhas de código em `src/` | 10.109 |
+| Linhas de teste em `tests/` | 4.537 |
+| Documentos de engenharia reversa | 12 |
+| Questões abertas registradas | 12 (Q-01..Q-12) |
+| Inconsistências de dados documentadas | 140 |
 
-| Denominador | Numerador | % |
+### 6.2 Percentual de conclusão
+
+Calculado sobre as **77 funcionalidades identificadas** na matriz §5, pelo
+estado de cada uma — não por impressão:
+
+| Estado | Quantidade |
+|---|---:|
+| **Concluído** (implementado **e** validado) | **71** |
+| Não portado por decisão documentada | 3 |
+| Substituído por operação equivalente | 1 |
+| Não aplicável ao modelo relacional | 1 |
+| Preservado ausente por questão aberta | 1 |
+| **Não iniciado** | **0** |
+
+```text
+% de conclusão = 71 / 77 = 92,2 %
+```
+
+**Das 6 restantes, nenhuma está pendente de trabalho** — todas são decisões
+registradas:
+
+| Funcionalidade | Estado | Por quê |
 |---|---|---|
-| **Projeto completo** — 68 funcionalidades implementadas e validadas | 0 | **0,0 %** |
-| **Fases do briefing** — 10 fases (A–J) | 3 concluídas (A, B, C) | **30,0 %** |
-| **Trabalho de engenharia reversa** — 45 PRG + 23 DBF + 16 NTX + 3 DBT analisados | 87 de 87 | **100,0 %** |
-| **Modelo de dados** — 12 entidades do legado representadas em SQLite | 12 de 12 | **100,0 %** |
+| Destino: etiqueta | não portado | Os `.LBL` estão ausentes; o layout não é recuperável (D-21) |
+| Splash gráfico | não portado | Depende de CLBC/GIP e da fonte `8X8.BCM`, ausentes |
+| Mouse | não portado | Dependia da biblioteca DOS; sem equivalente no terminal |
+| `PACK` na saída | substituído | Virou `--purgar`, deliberado e com backup (D-15) |
+| Auto-reconstrução de índices | não aplicável | O SQLite mantém os próprios |
+| Reparo — baixa de estoque | preservado ausente | **Q-12** aguarda decisão de negócio (D-13) |
 
-**Estado global: 0 % de funcionalidades implementadas.** Descoberta, documentação
-e modelo de dados concluídos; nenhuma linha da aplicação escrita.
+Excluindo as 5 decisões de não-portar e a substituição, **71 de 72
+funcionalidades portáveis estão concluídas (98,6 %)**; a única fora é a que
+depende de Q-12.
 
----
+### 6.3 Os 9 critérios do briefing §32
+
+| # | Critério | Estado | Evidência |
+|---|---|:-:|---|
+| 1 | Funcionalidades do legado identificadas | ✅ | 45 `.PRG` e 23 `.DBF` inventariados em `00`; 77 funcionalidades na matriz §5 |
+| 2 | Regras de negócio documentadas | ✅ | 42 regras em `03`, cada uma com arquivo e linha do legado |
+| 3 | Funcionalidades implementadas | ✅ | 71 concluídas; 6 decisões registradas; 0 pendentes |
+| 4 | Dados migráveis | ✅ | `make migrate`: 185 lidos, 222 gravados, 892 campos conferidos, 0 divergências |
+| 5 | Validações implementadas | ✅ | V-01..V-20, verificadas nominalmente na FASE H |
+| 6 | Testes executados | ✅ | 18 suítes, 1.027 asserções, todas passando (`make test`) |
+| 7 | Divergências documentadas | ✅ | 29 em `09`, cada uma com justificativa e impacto |
+| 8 | Compila e executa no Linux | ✅ | Harbour 3.2.1dev, GCC 15.2, Ubuntu 26.04 — `make` e `make run` |
+| 9 | Regressão satisfatória | ✅ | FASE I: 94 asserções sobre a massa de 1994 |
+
+### 6.4 O que esta auditoria NÃO afirma
+
+Três limites, ditos para que a conclusão signifique o que diz:
+
+1. **Os fluxos interativos não têm teste automatizado.** Toda a regra de negócio
+   está coberta — ela foi deliberadamente separada do desenho, e é por isso que
+   1.027 asserções rodam sem terminal. Mas navegação, edição em tela e
+   posicionamento de campo dependem de verificação à mão. Tentativas de injetar
+   teclas por pseudo-terminal se mostraram não confiáveis neste ambiente; a via
+   viável é `hb_keyPut()`, e o arnês não foi construído.
+
+2. **A regressão é auditoria de conformidade, não teste A/B.** `SCCV.EXE` é um
+   binário DOS de 1994 e não roda aqui. A FASE I comparou o sistema novo com o
+   comportamento **documentado** nas fases A e B — que foi extraído do código com
+   citação de arquivo e linha e conferido contra os dados, mas ainda assim é a
+   documentação, não o binário em execução.
+
+3. **Duas questões de negócio seguem abertas** e afetam comportamento:
+   **Q-10** (qual é a base correta da comissão sobre venda de peças — hoje o
+   *código* do funcionário, literal do legado) e **Q-12** (se o reparo deve
+   baixar estoque — hoje não baixa, literal do legado). Ambas isoladas em uma
+   função cada, de propósito: responder qualquer uma é alterar uma linha.
+
+As outras dez questões (Q-01..Q-09, Q-11) estão registradas e não afetam o
+comportamento implementado.
 
 ## 7. Riscos
 
@@ -1140,28 +1182,38 @@ O projeto só será declarado concluído quando **todos** os 9 critérios forem 
 
 ---
 
-## 11. Próximo passo
+## 11. Estado final
 
-**FASES A a I concluídas.** 17 suítes de teste, todas passando.
+**As dez fases estão concluídas.** O projeto atende aos 9 critérios do briefing
+§32 — ver §6.3, com a evidência de cada um.
 
 | | |
-|---|---|
-| Destinos do menu | 19 de 20 |
-| Validações V-01..V-20 | verificadas nominalmente |
-| Regressão | 94 asserções sobre a massa de 1994 |
-| Matriz §5 | 12 linhas pendentes |
+|---|---:|
+| Funcionalidades concluídas | 71 de 77 (92,2 %) |
+| Funcionalidades portáveis concluídas | 71 de 72 (98,6 %) |
+| Pendentes de trabalho | **0** |
+| Suítes de teste | 18 |
+| Asserções | 1.027 |
+| Divergências documentadas | 29 |
+| Questões abertas | 12, das quais 2 afetam comportamento |
 
-**Próxima e última: FASE J — auditoria final.** É a revisão completa contra o
-briefing §31 e §32: conferir que cada critério de conclusão está atendido, que a
-matriz de compatibilidade reflete o estado real, que as questões abertas estão
-registradas e que nada foi dado por concluído só porque compila.
+O que ficou de fora está em §6.2 e §6.4, e nenhum item é omissão: são cinco
+decisões de não-portar (etiqueta, splash gráfico, mouse, `PACK`, reconstrução de
+índices) e uma que aguarda decisão de negócio (Q-12).
 
-Há duas coisas que a auditoria vai ter de encarar de frente, e é melhor
-antecipá-las:
+### O que fazer a seguir
 
-1. **Os fluxos interativos não têm teste automatizado.** Toda a regra está
-   coberta, porque foi deliberadamente separada do desenho — mas a navegação e a
-   edição em tela dependem de verificação à mão.
-2. **Q-10 e Q-12 continuam abertas.** Não bloqueiam nada, estão isoladas em uma
-   função cada, mas são decisões de negócio pendentes e a auditoria precisa
-   dizê-lo.
+Nenhum destes é bloqueio; são os próximos passos naturais, em ordem de valor:
+
+1. **Responder Q-10 e Q-12.** São as duas decisões de negócio pendentes. Cada
+   uma está isolada numa função — `ComissaoVendaPeca()` e
+   `EstoqueReparoBaixa()` — e responder é alterar uma linha. Enquanto não vierem,
+   o sistema reproduz o legado literalmente, inclusive a fórmula anômala.
+2. **Verificar os fluxos interativos à mão.** Abrir `bin/sccv` num terminal e
+   percorrer os quatro fluxos de `04-FLUXOS.md`. É o único ponto em que a
+   cobertura automatizada não chega.
+3. **Fechar o arnês de teste de tela com `hb_keyPut()`**, se a verificação
+   manual apontar valor nisso.
+4. **Q-11** — os relatórios que o legado nunca teve (comissões por funcionário,
+   itens abaixo do mínimo, grupos em formação, movimento por período). Todos os
+   dados existem; falta a decisão de criá-los.

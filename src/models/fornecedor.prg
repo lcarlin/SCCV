@@ -2,7 +2,9 @@
  * fornecedor.prg — FASE G, onda 2
  *
  * `observacoes` é o antigo memo OBSFOR (.DBT). No SQLite é apenas TEXT, sem
- * arquivo separado e sem limite de bloco.
+ * arquivo separado e sem limite de bloco. O campo é do tipo "M": a tela abre um
+ * editor de várias linhas, como o MEMOEDIT do legado — um campo de uma linha
+ * truncaria o texto do acervo, que tem duas linhas e cem caracteres.
  */
 
 FUNCTION FornecedorDescritor()
@@ -22,5 +24,5 @@ FUNCTION FornecedorDescritor()
          ModeloCampo( "desc_item"  , "Item"       , "C", 35, {| x | ValTamanho( x, 35, "Item" ) } ), ;
          ModeloCampo( "fabrica"    , "Fábrica"    , "C", 30, {| x | ValTamanho( x, 30, "Fábrica" ) } ), ;
          ModeloCampo( "cnpj"       , "CNPJ"       , "C", 18, {| x | ValCnpj( x ) }, "cnpj_original", "cnpj_valido" ), ;
-         ModeloCampo( "observacoes", "Observações", "C", 60, NIL ) }, ;
+         ModeloCampo( "observacoes", "Observações", "M", 60, NIL ) }, ;
       "defaults" => { => } }

@@ -19,7 +19,7 @@ FUNCTION FormNovo( cTitulo )
    RETURN { "titulo" => cTitulo, "campos" => {}, "valores" => { => } }
 
 /*
- * cTipo: "C" texto · "N" número · "D" data ISO · "S" sim/não
+ * cTipo: "C" texto · "N" número · "D" data ISO · "$" centavos · "M" memo
  * bValidador: bloco que recebe o valor e devolve { ok, mensagem, valor },
  *             no formato de src/validation/validacao.prg. Pode ser NIL.
  */
@@ -131,7 +131,14 @@ STATIC PROCEDURE FormDesenhar( hF, nAtual )
 
 STATIC FUNCTION FormLerCampo( hC, xAtual )
 
-   LOCAL cBuf := PadR( FormTexto( xAtual, hC[ "tipo" ] ), hC[ "tamanho" ] )
+   LOCAL cBuf
+
+   /* memo abre o editor de várias linhas; o legado usava MEMOEDIT para OBSFOR */
+   IF hC[ "tipo" ] == "M"
+      RETURN UtilEditarMemo( FormTexto( xAtual, "C" ), hC[ "rotulo" ] )
+   ENDIF
+
+   cBuf := PadR( FormTexto( xAtual, hC[ "tipo" ] ), hC[ "tamanho" ] )
 
    @ hC[ "linha" ], hC[ "coluna" ] + 16 GET cBuf PICTURE Replicate( "X", hC[ "tamanho" ] )
    READ

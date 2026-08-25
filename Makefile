@@ -28,7 +28,8 @@ REL_SRC   := src/reports/relatorio.prg src/reports/definicoes.prg \
 UI_SRC    := src/ui/tela.prg src/ui/menu.prg src/ui/lookup.prg \
              src/ui/formulario.prg src/ui/browse.prg src/ui/cadastro.prg \
              src/ui/movimento.prg src/ui/tela_consorcio.prg \
-             src/ui/tela_relatorio.prg src/ui/tela_grafico.prg
+             src/ui/tela_relatorio.prg src/ui/tela_grafico.prg \
+             src/ui/utilitarios.prg
 
 SRV_SRC   := src/services/comissao.prg src/services/estoque.prg \
              src/services/venda.prg src/services/consorcio.prg
@@ -56,7 +57,7 @@ TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migrac
              testa_verificacao testa_infra testa_validacao testa_ui \
              testa_cadastro testa_servicos testa_venda testa_consorcio \
              testa_relatorios testa_graficos testa_admin testa_fase_h \
-             testa_regressao
+             testa_regressao testa_utilitarios
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda run install desinstalar
 
@@ -165,6 +166,9 @@ $(BIN)/testa_admin: tests/integration/testa_admin.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_fase_h: tests/integration/testa_fase_h.prg $(APP_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+$(BIN)/testa_utilitarios: tests/unit/testa_utilitarios.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # a regressão roda sobre a massa de 1994: precisa do migrador junto

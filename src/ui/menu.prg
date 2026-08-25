@@ -104,6 +104,11 @@ PROCEDURE MenuPrincipal( bDespachar, bImplementada )
                RETURN
             ENDIF
          ENDCASE
+      CASE nTecla == K_F1
+         /* atalhos globais do legado: SET KEY -1 e -2 em SCCV.PRG:16-17 */
+         UtilEspacoDisco( ConexaoArquivo() )
+      CASE nTecla == K_F2
+         UtilCalculadora()
       CASE nTecla == K_ESC .OR. nTecla == K_ALT_X
          IF Confirma( "Encerrar o sistema?" )
             RETURN
@@ -123,7 +128,7 @@ STATIC PROCEDURE MenuDesenhar( aDef, nGrupo )
          " " + PadR( aDef[ i ][ "titulo" ], 13 ) + " ", ;
          iif( i == nGrupo, "N/W", "W/N" ) )
    NEXT
-   Aviso( "← → escolhe o grupo · ↓ ou ENTER abre · ESC encerra" )
+   Aviso( "← → grupo · ↓/ENTER abre · F1 disco · F2 calculadora · ESC encerra" )
 
    RETURN
 
