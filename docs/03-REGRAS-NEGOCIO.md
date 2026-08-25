@@ -380,15 +380,20 @@ REGRA CODIFICADA:
 Origem:     CVMTVPEC.PRG:112-114 ; CVMTVREP.PRG:52-54
 Função:     MCOMFUN = COMFUN ; MCOMFUN = COMFUN+(MCODFUN * 0.2) ;
             REPLACE COMFUN WITH MCOMFUN
-Condição:   após localizar o funcionário
+Condição:   após localizar o funcionário — mas ver o DESTINO abaixo
 Comportamento: usa MCODFUN — o CÓDIGO do funcionário, não o valor da venda.
                Um funcionário de código 11 ganha R$ 2,20 por venda;
                um de código 1 ganha R$ 0,20 — independentemente do valor vendido.
 Impacto:    CVBFUNC.COMFUN
 Evidência:  os valores reais de COMFUN (1500,80 / 534,75 / 297,75 / 10,50 / 6,35)
             não guardam relação proporcional com nenhum valor de venda.
-Classificação prevista: [INDEFINIDO] — a intenção original não é determinável.
-            NÃO deve ser "corrigida" por suposição. Ver 09/D-05 e Q-10.
+DESTINO:    DEFEITUOSO — entre o SEEK e o REPLACE há um
+            "USE CVBFUNC INDEX CVIFUN1" que rebobina o ponteiro para o primeiro
+            registro. A comissão é creditada ao PRIMEIRO funcionário, não ao
+            informado. Mesmo defeito de RN-031. Ver 09/D-07.
+Classificação prevista: BASE [INDEFINIDO] — a intenção original não é
+            determinável; NÃO deve ser "corrigida" por suposição (09/D-05, Q-10).
+            DESTINO [CORREÇÃO] — inequívoco (09/D-07).
 ```
 
 ### RN-031 — Comissão de pronta entrega  **[COMPROVADA]**
@@ -399,7 +404,9 @@ Função:     MCOMFUN = COMFUN + (MVALCAR * 0.015)
 Aritmética: 0.015 exato; sem arredondamento
 Impacto:    CVBFUNC.COMFUN
 Observação: A gravação atinge o registro ERRADO (ver 09/D-07) — a fórmula, porém,
-            é claramente intencional e deve ser preservada.
+            é claramente intencional e deve ser preservada. O mesmo defeito de
+            destino ocorre em CVMTVPEC e CVMTVREP (RN-030); o consórcio
+            (RN-032) é o único módulo sem ele.
 ```
 
 ### RN-032 — Comissão de consórcio  **[COMPROVADA]**

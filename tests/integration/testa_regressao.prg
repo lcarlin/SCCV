@@ -359,8 +359,14 @@ STATIC PROCEDURE AuditoriaDivergencias( pDb )
       Len( LookupLinhas( pDb, "cliente" ) ) > 0 )
    D( "D-05", "comissão de peças usa o código (preservada, Q-10)", ;
       ComissaoVendaPeca( 11 ) == 220 )
-   D( "D-07", "comissão vai para o funcionário informado", ;
-      ComissaoAcumulada( pDb, 1 ) > 0 )
+   /*
+    * D-07 alcança TRÊS programas: pronta entrega, venda de peças e reparo. Os
+    * três tinham o `USE CVBFUNC` redundante e creditavam o primeiro funcionário.
+    * A verificação credita a um funcionário que NÃO é o primeiro e confere que
+    * o primeiro não foi tocado — nos três caminhos.
+    */
+   D( "D-07", "comissão vai para o funcionário informado, nos três caminhos", ;
+      AuditoriaD07( pDb ) )
    D( "D-08", "baixa de frota no modelo vendido", .T. )
    D( "D-10", "numeração de participante sem colisão", ;
       SqlEscalar( pDb, "SELECT count(*) FROM (SELECT cod_gru, num_participante" + ;
@@ -398,6 +404,42 @@ STATIC PROCEDURE AuditoriaDivergencias( pDb )
                        " WHERE name LIKE '%placa%'" ) == 0 )
 
    RETURN
+
+/*
+ * Credita pelos três caminhos a um funcionário que não é o primeiro do arquivo,
+ * e confirma que o primeiro permaneceu intocado. No legado, os três teriam ido
+ * para ele.
+ */
+STATIC FUNCTION AuditoriaD07( pDb )
+
+   LOCAL nPrimeiro, nAlvo, nAntesPri, nAntesAlvo, hVenda
+
+   nPrimeiro := SqlEscalar( pDb, "SELECT MIN(cod_fun) FROM funcionario" )
+   nAlvo     := SqlEscalar( pDb, "SELECT MAX(cod_fun) FROM funcionario" )
+   IF nPrimeiro == nAlvo
+      RETURN .F.
+   ENDIF
+   nAntesPri  := ComissaoAcumulada( pDb, nPrimeiro )
+   nAntesAlvo := ComissaoAcumulada( pDb, nAlvo )
+
+   /* 1 — venda de peças (CVMTVPEC.PRG:112) */
+   hVenda := VendaNova( "BALCAO", 7, "BatMan", nAlvo )
+   VendaAdicionarItem( pDb, hVenda, 1, 1 )
+   VendaGravar( pDb, hVenda )
+
+   /* 2 — reparo (CVMTVREP.PRG:52) */
+   hVenda := VendaNova( "REPARO", 7, "BatMan", nAlvo )
+   VendaAdicionarItem( pDb, hVenda, 1, 1 )
+   VendaGravar( pDb, hVenda )
+
+   /* 3 — pronta entrega (CVMTPENT.PRG:91) */
+   VendaVeiculoRegistrar( pDb, { "cod_car" => 3, "cod_cli" => 7, ;
+      "cod_fun" => nAlvo, "data_venda" => "1994-06-30", "valor_cent" => 1800000, ;
+      "forma_pagamento" => "", "descricao" => "FIORINO", ;
+      "nome_cli" => "BatMan", "nome_fun" => "" } )
+
+   RETURN ComissaoAcumulada( pDb, nAlvo ) > nAntesAlvo .AND. ;
+          ComissaoAcumulada( pDb, nPrimeiro ) == nAntesPri
 
 STATIC PROCEDURE D( cId, cDesc, lOk )
    Vale( cId + " — " + cDesc, lOk, .T. )

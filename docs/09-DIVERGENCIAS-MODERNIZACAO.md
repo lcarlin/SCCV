@@ -88,7 +88,7 @@
 | **Novo** | **Preservado como está**, com aviso registrado |
 | **Justificativa** | A intenção original **não é determinável**. Três leituras são igualmente plausíveis: (a) deveria ser `MSUBTOT * 0.2` (20% do item); (b) deveria ser `MTOTALC * 0.02` (2% da compra); (c) deveria ser `MQTVEND * 0.2` (R$ 0,20 por peça). O briefing §2 é explícito: *"NUNCA introduza uma regra de negócio simplesmente porque ela parece razoável"* |
 | **Ação** | Implementar a fórmula literal do legado, isolada em uma função `ComissaoVendaPeca()` documentada, e escalar a questão como **Q-10** |
-| **Regra relacionada** | RN-030 |
+| **Regra relacionada** | RN-030 · ver também **D-07**, que alcança os mesmos dois programas: o bloco de comissão de `CVMTVPEC` e `CVMTVREP` também credita o funcionário errado |
 
 > **REGRA NÃO DETERMINADA PELO LEGADO — Q-10.** Qual é a base de cálculo correta da comissão sobre venda de peças e reparos? O legado usa o código do funcionário. Encontrado em `CVMTVPEC.PRG:113` e `CVMTVREP.PRG:53`. As comissões de pronta entrega (1,5% do valor) e de consórcio (0,15% da prestação) usam bases coerentes, o que reforça que esta é anômala — mas não indica qual seria a correta.
 
@@ -108,18 +108,79 @@
 
 ---
 
-## D-07 — Comissão de pronta entrega creditada ao funcionário errado
+## D-07 — Comissão creditada ao funcionário errado (três programas)
 
 **`[CORREÇÃO]`**
 
 | | |
 |---|---|
-| **Local** | `CVMTPENT.PRG:87-89` e `:133-134` |
-| **Legado** | Após localizar o funcionário com `SEEK`, o código executa `USE CVBFUNC INDEX CVIFUN1` novamente — reabrindo a tabela e posicionando no primeiro registro. `MCOMFUN = COMFUN + (MVALCAR*0.015)` lê a comissão do **primeiro** funcionário, e o `REPLACE COMFUN` grava nele |
-| **Novo** | Ler e gravar a comissão do funcionário efetivamente informado |
-| **Justificativa** | A fórmula (1,5% do valor do veículo) é claramente intencional. O destino errado é consequência do `USE` redundante — não há leitura em que creditar sempre ao primeiro funcionário da tabela seja uma regra |
-| **Impacto nos dados** | Confirmado: `COMFUN` do funcionário 1 (ALETHEIA KARINA) = R$ 1.500,80, contra R$ 534,75 do segundo e R$ 0,00 de três outros. `CVBPENT` tem 23 vendas distribuídas entre 6 funcionários |
-| **Regra relacionada** | RN-031 |
+| **Local** | `CVMTPENT.PRG:91` (pronta entrega) · `CVMTVPEC.PRG:112` (venda de peças) · `CVMTVREP.PRG:52` (reparo) |
+| **Legado** | Após localizar o funcionário com `SEEK`, os três programas executam `USE CVBFUNC INDEX CVIFUN1` — reabrindo a tabela que já estava aberta e rebobinando o ponteiro para o **primeiro registro**. A partir dali, `COMFUN` deixa de ser a comissão do funcionário informado e passa a ser a do primeiro por código. O `REPLACE COMFUN` grava nele |
+| **Novo** | Ler e gravar a comissão do funcionário efetivamente informado, nos três casos |
+| **Justificativa** | A intenção é inequívoca por três evidências convergentes: o programa **pede** o código do funcionário, **valida** que ele existe e **exibe o nome dele na tela** para conferência. Não há leitura em que "creditar sempre ao primeiro funcionário da tabela" seja regra de negócio — seria uma regra que torna inútil todo o trabalho de identificar o vendedor. As fórmulas em si (1,5% do veículo, 0,15% da prestação) são preservadas; o que muda é só o destino |
+| **Regra relacionada** | RN-030, RN-031 |
+
+### O mecanismo
+
+No Clipper não há objeto de tabela: há **áreas de trabalho**, cada uma com um
+**ponteiro de registro**. Escrever `COMFUN` lê o campo do registro em que o
+ponteiro está parado — qual funcionário é estado implícito. `SEEK` posiciona no
+registro encontrado; `USE` **abre** a tabela e posiciona no primeiro.
+
+```clipper
+SEEK MCODFUN                       && posiciona no funcionário informado
+IF .NOT. FOUND() ... ENDIF
+MNOMFUN = NOMFUN                   && lê o nome DELE — o SEEK funcionou
+@ 14,29 GET MNOMFUN                && e o operador confere na tela
+CLEAR GETS
+USE CVBFUNC  INDEX CVIFUN1         && ✗ rebobina o ponteiro para o 1º registro
+MCOMFUN = COMFUN                   && lê a comissão do PRIMEIRO
+MCOMFUN = COMFUN + (<fórmula>)
+REPLACE COMFUN WITH MCOMFUN        && grava no PRIMEIRO
+```
+
+A linha do `USE` é provavelmente hábito de programação DOS — reabrir "para
+garantir" que a tabela está aberta. Em Clipper, sobre uma área já em uso, ela é
+redundante e destrutiva: descarta o posicionamento.
+
+### Alcance — corrigido em 2026-08-25
+
+Este documento registrava o defeito **apenas** para `CVMTPENT.PRG`. Ao investigar
+Q-10 encontrou-se o mesmo bloco de três linhas em mais dois programas:
+
+| Programa | Comissão | `USE` redundante | Destino |
+|---|---|:-:|---|
+| `CVMTPENT.PRG:91` | pronta entrega, 1,5% do veículo (RN-031) | **sim** | primeiro funcionário |
+| `CVMTVPEC.PRG:112` | venda de peças, código × 0,20 (RN-030) | **sim** | primeiro funcionário |
+| `CVMTVREP.PRG:52` | reparo, código × 0,20 (RN-030) | **sim** | primeiro funcionário |
+| `CVMTCON.PRG:104` | consórcio, 0,15% da prestação (RN-032) | não | funcionário informado ✅ |
+
+**Três das quatro comissões do legado iam para o funcionário errado.** O
+consórcio é a única correta — e é justamente a que não tem o `USE` redundante.
+
+### Impacto nos dados
+
+`CVBPENT` tem 23 vendas distribuídas entre 6 funcionários. Se a comissão fosse
+para quem vendeu, os seis teriam saldo. O que há:
+
+| Cód. | Funcionário | `COMFUN` |
+|---:|---|---:|
+| 1 | ALETHEIA KARINA | R$ 1.500,80 |
+| 2 | MARINARA | R$ 534,75 |
+| 3 | SHARON STONE | R$ 297,75 |
+| 5 | ISADORA RIBEIRO | R$ 277,50 |
+| 4 | VANNA DO MP | R$ 10,50 |
+| 11 | OSWALDO COELHO | R$ 6,35 |
+| 6, 7, 8, 10 | quatro funcionários | **R$ 0,00** |
+
+A concentração no código 1 é o defeito visível. Os saldos dos demais vieram do
+consórcio — o módulo que credita corretamente.
+
+### Consequência para Q-10
+
+Não decide a questão, mas informa: um bloco de código que erra o **destino** em
+dois programas é um bloco descuidado, o que torna menos plausível que a **base
+de cálculo** anômala de RN-030 fosse deliberada. Ver D-05.
 
 ---
 

@@ -930,8 +930,8 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 | Pronta entrega — venda | OK | OK | OK | **Concluído** |
 | Pronta entrega — baixa de frota | Defeituoso (D-08) | OK | OK | **Concluído** — sem D-08 |
 | Pronta entrega — aviso de último veículo | OK | OK | OK | **Concluído** — RN-035 |
-| Comissão — venda de peças | **Indefinido** (D-05) | OK | OK | **Concluído** — fórmula literal, **Q-10 aberta** |
-| Comissão — reparo | **Indefinido** (D-05) | OK | OK | **Concluído** — mesma fórmula, **Q-10 aberta** |
+| Comissão — venda de peças | **Indefinido** (D-05) + destino errado (D-07) | OK | OK | **Concluído** — fórmula literal, destino corrigido, **Q-10 aberta** |
+| Comissão — reparo | **Indefinido** (D-05) + destino errado (D-07) | OK | OK | **Concluído** — mesma fórmula, destino corrigido, **Q-10 aberta** |
 | Comissão — pronta entrega (1,5%) | Defeituoso (D-07) | OK | OK | **Concluído** — sem D-07 |
 | Comissão — consórcio (0,15%) | OK | OK | OK | **Concluído** — creditada na adesão |
 
