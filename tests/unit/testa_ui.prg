@@ -82,12 +82,13 @@ STATIC PROCEDURE TestaMenu()
       nItens += Len( aDef[ i ][ "itens" ] )
       Vale( "grupo " + hb_ntos( i ) + " tem itens", Len( aDef[ i ][ "itens" ] ) > 0, .T. )
    NEXT
-   Vale( "19 destinos declarados", nItens, 19 )
+   /* 20 desde a onda 7, que acrescentou "Relatórios" ao grupo Serviços */
+   Vale( "20 destinos declarados", nItens, 20 )
 
    /* o marcador de "pronto" tem de refletir a implementação real, não a
       declaração — senão o menu mente para o operador */
    hCob := MenuCobertura( {| c | HB_SYMBOL_UNUSED( c ), .F. } )
-   Vale( "cobertura conta o total", hCob[ "total" ], 19 )
+   Vale( "cobertura conta o total", hCob[ "total" ], 20 )
    Vale( "nada implementado na onda 1", hCob[ "implementados" ], 0 )
    hCob := MenuCobertura( {| c | c == "cliente.manutencao" } )
    Vale( "cobertura acompanha o predicado", hCob[ "implementados" ], 1 )

@@ -22,9 +22,12 @@ ORIGEM    ?= legacy
 DESTINO   ?= sccv.db
 
 # validacao.prg é pura (só lógica); integridade.prg consulta o banco
+REL_SRC   := src/reports/relatorio.prg src/reports/definicoes.prg
+
 UI_SRC    := src/ui/tela.prg src/ui/menu.prg src/ui/lookup.prg \
              src/ui/formulario.prg src/ui/browse.prg src/ui/cadastro.prg \
-             src/ui/movimento.prg src/ui/tela_consorcio.prg
+             src/ui/movimento.prg src/ui/tela_consorcio.prg \
+             src/ui/tela_relatorio.prg
 
 SRV_SRC   := src/services/comissao.prg src/services/estoque.prg \
              src/services/venda.prg src/services/consorcio.prg
@@ -41,7 +44,7 @@ VAL_SRC   := $(VAL_PURA) src/validation/integridade.prg
 
 APP_SRC   := src/app/config.prg src/app/log.prg src/app/erro.prg \
              src/database/conexao.prg src/database/transacao.prg \
-             src/database/sql.prg $(VAL_SRC) $(UI_SRC) $(MOD_SRC) $(SRV_SRC)
+             src/database/sql.prg $(VAL_SRC) $(UI_SRC) $(MOD_SRC) $(SRV_SRC) $(REL_SRC)
 
 MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
              src/migration/normalizador.prg src/migration/inconsistencia.prg \
@@ -49,7 +52,8 @@ MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
 
 TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao \
              testa_verificacao testa_infra testa_validacao testa_ui \
-             testa_cadastro testa_servicos testa_venda testa_consorcio
+             testa_cadastro testa_servicos testa_venda testa_consorcio \
+             testa_relatorios
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda run install desinstalar
 
@@ -146,6 +150,9 @@ $(BIN)/testa_venda: tests/integration/testa_venda.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_consorcio: tests/integration/testa_consorcio.prg $(APP_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+$(BIN)/testa_relatorios: tests/integration/testa_relatorios.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # --- utilidades -------------------------------------------------------

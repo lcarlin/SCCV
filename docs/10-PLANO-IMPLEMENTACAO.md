@@ -400,7 +400,7 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 | **4** ✅ | `services/comissao.prg` · `services/estoque.prg` | 2, 3 |
 | **5** ✅ | Movimento: **venda de peças (balcão)**, **reparo**, **pronta entrega** | 3, 4 |
 | **6** ✅ | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
-| **7** | Relatórios R-01..R-10 | 2–6 |
+| **7** ✅ | Relatórios R-01..R-10 | 2–6 |
 | **8** | Gráficos R-11, R-12 (barras + CSV) | 5 |
 | **9** | Comandos administrativos: `--purgar`, `--backup`, `--restore`, `--verificar` | todos |
 
@@ -631,6 +631,48 @@ subtrair sem piso em zero.
 bruto em `*_legado`) recusam baixa de prestações com mensagem que explica a
 origem e mostra o valor original. Sem saldo conhecido não há o que subtrair.
 
+#### Onda 7 — concluída em 2026-08-25
+
+Relatórios R-01 a R-10. 50 asserções em `tests/integration/testa_relatorios.prg`.
+**18 dos 20 destinos do menu ligados.**
+
+Os dez relatórios são **dado**, não código: cada um é uma definição com SQL,
+colunas e totais, e o motor é um só. A geração de linhas é separada do desenho,
+o que permite verificar conteúdo, filtros e totais dos dez sem abrir terminal —
+e faz o mesmo relatório servir tela, arquivo e impressão sem três
+implementações.
+
+Correções de `06` §6 aplicadas:
+
+| # | O que era | O que é |
+|---|---|---|
+| CR-01 | R-09 referenciava 7 campos, dos quais **6 não existem** em `CVBGRUCO` — erro de runtime na primeira linha. Nunca funcionou | Mapeado para os campos reais; funciona |
+| CR-02 | R-07 mostrava `VALTOT`, que só existe na última linha de cada compra: 37% das linhas com zero, sem total | Subtotal por linha e **total geral** |
+| CR-03 | R-07 e R-08 liam a mesma tabela sem filtro e mostravam os mesmos registros | Filtram por origem: balcão e reparo |
+| CR-04 | "Relatório de estoque de peças" sem mostrar estoque | Quantidade e mínimo incluídos |
+| CR-05 | Primeira página da frota saía sem cabeçalho | Cabeçalho é parte da geração |
+| CR-06 | Pausa em tela nunca ocorria (`IF NL = 18`, mas `NL` só era 23 ou 60) | Paginação pela altura real do terminal |
+| CR-07 | Colunas `C(35)` invadiam a coluna seguinte em três relatórios | Posicionamento por largura |
+| CR-09 | Páginas se sobrepunham em tela | `CLS` na quebra |
+
+As vendas **migradas** têm `origem = 'INDETERMINADO'` e não aparecem em R-07 nem
+em R-08. O dado do legado não permite classificá-las (Q-02), e inventar a
+classificação seria pior do que declarar a lacuna.
+
+R-09 lista apenas grupos **fechados**, como o legado — ele lia `CVBGRUCO`.
+Relatório de grupos em formação é uma das lacunas de Q-11, e não foi criado.
+
+**Defeito encontrado e corrigido: `Left()` e `PadR()` contam bytes.**
+
+Em UTF-8 `Ó` ocupa dois bytes, então `Left( "CÓDIGO", 6 )` devolve `CÓDIG` — a
+coluna sai cortada e o preenchimento erra a largura na mesma medida,
+desalinhando tudo o que vier depois. Num relatório em português isso atinge
+quase todo cabeçalho. O motor passou a usar `hb_ULeft()`, `hb_UPadL()`,
+`hb_UPadR()` e `hb_UPadC()`, que contam caracteres.
+
+Etiquetas continuam **não implementadas** (D-21): os `.LBL` estão ausentes e o
+layout não é recuperável.
+
 **Limite declarado:** os fluxos interativos (navegação, edição em tela) **não têm
 teste automatizado**. O que é testável foi separado do desenho e está coberto; o
 desenho depende de verificação à mão. Injeção por pseudo-terminal se mostrou não
@@ -730,16 +772,16 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
-| R-01 Clientes (3 filtros) | OK | — | — | Não iniciado |
-| R-02 Funcionários | OK | — | — | Não iniciado |
-| R-03 Fornecedores | OK (CR-06) | — | — | Não iniciado |
-| R-04 Estoque de peças | OK (CR-04) | — | — | Não iniciado |
-| R-05 Almoxarifado | OK | — | — | Não iniciado |
-| R-06 Frota | OK (CR-05) | — | — | Não iniciado |
-| R-07 Venda de peças | Parcial (CR-02) | — | — | Não iniciado |
-| R-08 Orçamentos | Duplicado de R-07 (CR-03) | — | — | Não iniciado |
-| R-09 Consórcios | **INOPERANTE** (B-16) | — | — | Não iniciado |
-| R-10 Pronta entrega | OK (CR-07) | — | — | Não iniciado |
+| R-01 Clientes (3 filtros) | OK | OK | OK | **Concluído** — RN-040 preservada |
+| R-02 Funcionários | OK | OK | OK | **Concluído** — com total |
+| R-03 Fornecedores | OK (CR-06) | OK | OK | **Concluído** — CR-06 |
+| R-04 Estoque de peças | OK (CR-04) | OK | OK | **Concluído** — CR-04: agora mostra estoque |
+| R-05 Almoxarifado | OK | OK | OK | **Concluído** |
+| R-06 Frota | OK (CR-05) | OK | OK | **Concluído** — CR-05 |
+| R-07 Venda de peças | Parcial (CR-02) | OK | OK | **Concluído** — CR-02 e CR-03 |
+| R-08 Orçamentos | Duplicado de R-07 (CR-03) | OK | OK | **Concluído** — CR-03 |
+| R-09 Consórcios | **INOPERANTE** (B-16) | OK | OK | **Concluído** — CR-01, agora funciona |
+| R-10 Pronta entrega | OK (CR-07) | OK | OK | **Concluído** — CR-07 |
 | R-11 Gráfico de veículos | Inoperante (biblioteca ausente) | — | — | Não iniciado |
 | R-12 Gráfico de peças | Inoperante (biblioteca ausente) | — | — | Não iniciado |
 | Destino: tela | OK | — | — | Não iniciado |

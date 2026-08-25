@@ -40,12 +40,13 @@ FUNCTION MenuDefinicao()
          { "titulo" => "Reparo de autos"  , "acao" => "venda.reparo"  }, ;
          { "titulo" => "Pronta entrega"   , "acao" => "venda.pronta"  }, ;
          { "titulo" => "Consórcio"        , "acao" => "consorcio" }, ;
-         { "titulo" => "Comissões"        , "acao" => NIL } } }, ;
+         { "titulo" => "Comissões"        , "acao" => NIL }, ;
+         { "titulo" => "Relatórios"       , "acao" => "relatorio.servicos" } } }, ;
       { "titulo" => "Estoques", "coluna" => 63, "itens" => { ;
          { "titulo" => "Peças"        , "acao" => "peca.manutencao"         }, ;
          { "titulo" => "Almoxarifado" , "acao" => "almoxarifado.manutencao" }, ;
          { "titulo" => "Frota"        , "acao" => "modelo.manutencao"       }, ;
-         { "titulo" => "Consultas"    , "acao" => NIL }, ;
+         { "titulo" => "Relatórios"   , "acao" => "relatorio.estoques" }, ;
          { "titulo" => "Gráficos"     , "acao" => NIL } } } }
 
 /* Quantos destinos existem, e quantos já têm ação — para o resumo de estado. */
