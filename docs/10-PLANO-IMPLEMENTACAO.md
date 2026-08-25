@@ -762,9 +762,55 @@ confiável (um ESC isolado vindo por pipe chega ao GT como `K_RIGHT`);
 `hb_keyPut()` funciona — foi ela que encontrou o defeito do `box.ch` — mas o
 arnês não foi fechado.
 
-### FASE H — Validações  *(paralela às ondas 1–3 da FASE G)*
+### FASE H — Validações — **CONCLUÍDA** (2026-08-25)
 
 Implementar V-01..V-20 (`05` §8), respeitando as proibições de `05` §9.
+
+As validações foram escritas nas ondas 1 e 4 da FASE G — `src/validation/` e os
+serviços de estoque e comissão. O que a FASE H acrescenta é o que faltava para
+ela fechar: a **verificação nominal**, uma a uma, ligando cada `V-nn` a um
+comportamento observável, de preferência com um valor real do acervo de 1994.
+
+`tests/integration/testa_fase_h.prg` — **30 asserções, 0 falhas**: as 20
+validações mais as 9 proibições do §9.
+
+Isso existe para a FASE J poder auditar. Uma matriz que diz "implementado" sem
+apontar onde isso é verificável não é rastreabilidade, é afirmação.
+
+| # | Validação | Onde vive | Caso do acervo que a exercita |
+|---|---|---|---|
+| V-01 | DV de CPF | `ValCpf()` | `666.666.666-66` recusado |
+| V-02 | DV de CNPJ | `ValCnpj()` | `27439872194873285783` e `3484378438743]` |
+| V-03 | Normalização de CPF/CNPJ | `ValCpf()`/`ValCnpj()` + coluna `*_original` | máscara não vai para a coluna |
+| V-04 | Formato de CEP | `ValCep()` | `798797`, `5877`, `188000-00` |
+| V-05 | Tipo de CEP consistente | schema: `TEXT` nas três tabelas | era `N(8)` × `C(9)` |
+| V-06 | Normalização de telefone | `ValTelefone()` | `(0143)051-2382` → `01430512382` |
+| V-07 | Ano de 4 dígitos | `ValData()` | `10/10/10` recusado |
+| V-08 | Faixa de nascimento | `ValNascimento()` + `ValNascimentoSuspeito()` | `1901-01-01`, `1911-11-11` |
+| V-09 | Data de evento não futura | `ValDataEvento()` | `1901-11-11` aceito; futuro recusado |
+| V-10 | Lista de UFs | `ValUf()` | `SC`/`TO` aceitos, `FN`/`RC` recusados |
+| V-11 | Igualdade exata | `==` em vez de `$` | prefixo `S` recusado como UF |
+| V-12 | Obrigatoriedade de nome | `ValObrigatorio()` | fornecedor 2, com 9 campos vazios |
+| V-13 | Unicidade de CPF | `IntegCpfUnico()` | não colide contra o próprio registro |
+| V-14 | Quantidade não negativa | `ValQuantidade()` | — |
+| V-15 | Prestações ≥ 0 | `ValParcelas()` + `ConsorcioBaixarPrestacoes()` | `-2` e `-3` de `CVBGRUCO` |
+| V-16 | Monetário não negativo | `ValMonetario()`/`ValReais()` | — |
+| V-17 | Integridade na exclusão | `IntegPodeExcluir()` + purga | cliente com venda não é excluído |
+| V-18 | Faixa de chassi | `ValFaixaChassi()` | fim < início recusado |
+| V-19 | Valor cabe no campo | `ValTamanho()` | 36 caracteres em campo de 35 |
+| V-20 | Sincronismo dos agregados | views `v_venda_por_*` | agregado acompanha o movimento |
+
+**O §9 é tão normativo quanto o §8**, e também está verificado: CPF, CNPJ,
+telefone, CEP, UF, data de nascimento e data de venda **continuam opcionais**; e
+o estoque abaixo do mínimo continua sendo alerta com confirmação, não bloqueio
+(RN-028). Uma validação que barra cadastro legítimo é regressão disfarçada de
+rigor.
+
+Três validações alteram comportamento observável e estão registradas como
+divergência: **V-10** (a lista de UFs muda), **V-11** (a comparação exata recusa
+o que `$` aceitava) e **V-15** (saldo negativo deixa de ser possível). A quarta,
+**D-27**, é a única que torna mais restritiva uma operação corrente — vender
+abaixo de zero.
 
 ### FASE I — Regressão  *(pré-requisito: G, H)*
 
@@ -871,7 +917,20 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 | Destino: arquivo | **Ausente** | — | — | Não iniciado |
 | Destino: etiqueta | **INOPERANTE** (D-21) | — | — | **Não portado** |
 
-### 5.5 Infraestrutura
+### 5.5 Validações (FASE H)
+
+| Grupo | Clipper | Harbour | SQLite | Status |
+|---|---|---|---|---|
+| V-01..V-03 documentos | **Ausente** | OK | OK | **Concluído** |
+| V-04..V-06 contato | **Ausente** | OK | OK | **Concluído** |
+| V-07..V-09 datas | **Ausente** | OK | OK | **Concluído** |
+| V-10..V-12 domínio e obrigatoriedade | Parcial/defeituoso | OK | OK | **Concluído** |
+| V-13, V-17 integridade | **Ausente** | OK | OK | **Concluído** |
+| V-14..V-16, V-18, V-19 números e faixas | **Ausente** | OK | OK | **Concluído** |
+| V-20 sincronismo de agregados | **Ausente** | OK | OK | **Concluído** |
+| `05` §9 — proibições respeitadas | — | OK | OK | **Concluído** |
+
+### 5.6 Infraestrutura
 
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
@@ -1038,26 +1097,24 @@ O projeto só será declarado concluído quando **todos** os 9 critérios forem 
 
 ## 11. Próximo passo
 
-**FASES A a G concluídas.** As nove ondas da FASE G estão fechadas: 19 dos 20
-destinos do menu funcionam, e o único desligado — relatório de comissões — é uma
-lacuna que o **legado nunca teve** (Q-11), registrada e não criada por decisão de
-método.
+**FASES A a H concluídas.** 16 suítes de teste, todas passando.
 
 | | |
 |---|---|
-| Suítes de teste | 15, todas passando (`make test`) |
 | Destinos do menu | 19 de 20 |
+| Validações V-01..V-20 | verificadas nominalmente |
 | Matriz §5 | 12 linhas pendentes |
 
-**Próxima: FASE H — validações.** Na prática já está quase toda entregue: V-01 a
-V-19 foram implementadas na onda 1 e cobertas por 101 asserções, e as regras de
-estoque e comissão vieram na onda 4. O que falta é **consolidar o registro** e
-conferir uma a uma contra `05` §8, incluindo as três que alteram comportamento
-observável (V-10, V-11, V-15).
+**Próxima: FASE I — regressão.** É a fase que compara o comportamento do sistema
+novo com o do legado sobre a mesma massa de dados. Tem uma dificuldade própria
+que as anteriores não tinham: **o legado não roda aqui**. `SCCV.EXE` é um
+binário DOS de 1994, e não há DOSBox nem intenção de instalá-lo. A comparação,
+então, não é "executar os dois e conferir" — é confrontar o comportamento
+implementado com o comportamento **documentado** nas 40 regras de negócio, e
+verificar que cada divergência D-01..D-29 se manifesta como o documento diz.
 
-Depois: **FASE I — regressão**, comparando o comportamento do sistema novo com o
-do legado sobre a mesma massa de dados; e **FASE J — auditoria final**.
+Isso torna a FASE I uma auditoria de conformidade, não um teste A/B. A distinção
+importa e precisa estar dita: onde o legado não pode ser executado, a fonte da
+verdade é a engenharia reversa das FASES A e B, e é contra ela que se compara.
 
-As duas questões abertas que dependem de decisão de negócio continuam de pé, sem
-bloquear: **Q-10** (base da comissão sobre venda de peças) e **Q-12** (se o
-reparo deve baixar estoque). Ambas isoladas em uma função, de propósito.
+Depois: **FASE J — auditoria final**.
