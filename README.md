@@ -167,6 +167,8 @@ empiricamente. Ver [`docs/05-VALIDACOES-LEGADO.md`](docs/05-VALIDACOES-LEGADO.md
 
 O código legado é a fonte da verdade sobre o comportamento. Nenhuma regra de
 negócio é inventada: onde a intenção original não é determinável, o comportamento
-literal é preservado e a dúvida fica registrada (12 questões abertas, Q-01..Q-12).
+literal é preservado e a dúvida fica registrada (12 questões, Q-01..Q-12; as
+duas que afetavam comportamento — Q-10 e Q-12 — foram respondidas em 2026-08-25,
+ambas confirmando o comportamento do legado).
 Toda diferença entre legado e sistema novo é classificada e rastreável —
 27 divergências em [`docs/09-DIVERGENCIAS-MODERNIZACAO.md`](docs/09-DIVERGENCIAS-MODERNIZACAO.md).

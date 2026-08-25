@@ -85,12 +85,26 @@
 |---|---|
 | **Local** | `CVMTVPEC.PRG:113`, `CVMTVREP.PRG:53` |
 | **Legado** | `COMFUN = COMFUN + (MCODFUN * 0.2)` — usa o **código** do funcionário como base de cálculo |
-| **Novo** | **Preservado como está**, com aviso registrado |
-| **Justificativa** | A intenção original **não é determinável**. Três leituras são igualmente plausíveis: (a) deveria ser `MSUBTOT * 0.2` (20% do item); (b) deveria ser `MTOTALC * 0.02` (2% da compra); (c) deveria ser `MQTVEND * 0.2` (R$ 0,20 por peça). O briefing §2 é explícito: *"NUNCA introduza uma regra de negócio simplesmente porque ela parece razoável"* |
+| **Novo** | **Preservado como está** — confirmado como regra pelo responsável em 2026-08-25 (Q-10) |
+| **Justificativa** | A intenção original **não era determinável**. Três leituras eram igualmente plausíveis: (a) deveria ser `MSUBTOT * 0.2` (20% do item); (b) deveria ser `MTOTALC * 0.02` (2% da compra); (c) deveria ser `MQTVEND * 0.2` (R$ 0,20 por peça). O briefing §2 é explícito: *"NUNCA introduza uma regra de negócio simplesmente porque ela parece razoável"* |
 | **Ação** | Implementar a fórmula literal do legado, isolada em uma função `ComissaoVendaPeca()` documentada, e escalar a questão como **Q-10** |
 | **Regra relacionada** | RN-030 · ver também **D-07**, que alcança os mesmos dois programas: o bloco de comissão de `CVMTVPEC` e `CVMTVREP` também credita o funcionário errado |
 
-> **REGRA NÃO DETERMINADA PELO LEGADO — Q-10.** Qual é a base de cálculo correta da comissão sobre venda de peças e reparos? O legado usa o código do funcionário. Encontrado em `CVMTVPEC.PRG:113` e `CVMTVREP.PRG:53`. As comissões de pronta entrega (1,5% do valor) e de consórcio (0,15% da prestação) usam bases coerentes, o que reforça que esta é anômala — mas não indica qual seria a correta.
+> **Q-10 — RESPONDIDA em 2026-08-25.** Perguntado ao responsável qual seria a
+> base correta, apresentadas as quatro leituras possíveis e o que cada uma
+> produziria sobre o acervo (20% do subtotal → R$ 70.903,00 · 2% da compra →
+> R$ 7.090,70 · R$ 0,20 por peça → R$ 2.326,20 · código × 0,20 → não
+> reconstituível, porque `CVPECAS` não registra o vendedor).
+>
+> **Decisão: manter a fórmula do legado — `código do funcionário × 0,20`.**
+>
+> Isso muda o *status*, não o comportamento. A fórmula deixa de ser um literal
+> preservado à espera de decisão e passa a ser **regra de negócio confirmada**.
+> A classificação `[INDEFINIDO]` desta divergência se encerra: não há divergência
+> entre legado e sistema novo neste ponto.
+>
+> `ComissaoVendaPeca()` continua isolada em três linhas — não mais por dúvida,
+> mas porque uma fórmula de comissão é o tipo de regra que muda com o tempo.
 
 ---
 
@@ -269,12 +283,27 @@ de cálculo** anômala de RN-030 fosse deliberada. Ver D-05.
 |---|---|
 | **Local** | `CVMTVREP.PRG` — ausência de `REPLACE QTDPEC` |
 | **Legado** | A venda de balcão (`CVMTVPEC`) baixa o estoque; o reparo (`CVMTVREP`) **não** |
-| **Novo** | **Preservado como está**, com aviso registrado |
+| **Novo** | **Preservado como está** — confirmado pelo responsável em 2026-08-25 (Q-12) |
 | **Justificativa** | Duas leituras plausíveis: (a) omissão — peças de reparo saem do mesmo estoque e deveriam baixar; (b) intencional — reparos usam peças de outra origem (o `CVBALMOX` existe e nunca é baixado, Q-01). Não há evidência que decida. O briefing §2 proíbe introduzir a regra por parecer razoável |
 | **Ação** | Implementar sem baixa (como o legado), com a fórmula isolada e a questão escalada como **Q-12** |
 | **Regra relacionada** | RN-029 |
 
-> **REGRA NÃO DETERMINADA PELO LEGADO — Q-12.** Peças consumidas em reparo devem baixar o estoque de `CVBPECAS`? E o almoxarifado (Q-01), é consumido por algum evento? Encontrado em `CVMTVREP.PRG` (sem baixa) vs. `CVMTVPEC.PRG:117` (com baixa).
+> **Q-12 — RESPONDIDA em 2026-08-25.** Perguntado ao responsável de onde saem as
+> peças usadas num reparo, apresentadas as três possibilidades (estoque de peças
+> · almoxarifado · controle externo).
+>
+> **Decisão: manter como está — o reparo não baixa estoque.** O responsável não
+> recuperou a intenção original, o que é esperado num sistema de 32 anos.
+>
+> Pelo método do projeto, essa é a resposta correta quando a memória não alcança:
+> preserva-se o comportamento literal e registra-se a decisão, em vez de escolher
+> a leitura que parece mais razoável. O briefing §2 é explícito.
+>
+> A classificação `[INDEFINIDO]` se encerra: o comportamento passa a ser
+> deliberado. `EstoqueReparoBaixa()` continua existindo e devolvendo `.F.` — se a
+> intenção for recuperada algum dia, há um lugar único para mudar.
+>
+> **Q-01 permanece aberta**: o almoxarifado continua sem evento que o consuma.
 
 ---
 

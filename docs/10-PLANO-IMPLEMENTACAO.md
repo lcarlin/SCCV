@@ -500,7 +500,7 @@ existe tanto para verificar o que foi feito quanto para impedir que alguém
 
 | Regra | Base | Estado |
 |---|---|---|
-| RN-030 venda de peças e reparos | **código do funcionário** × 0,20 | preservada literal — **Q-10** |
+| RN-030 venda de peças e reparos | **código do funcionário** × 0,20 | confirmada pelo negócio (Q-10, 2026-08-25) |
 | RN-031 pronta entrega | 1,5% do valor do veículo | preservada |
 | RN-032 consórcio | 0,15% da prestação | preservada |
 
@@ -508,7 +508,8 @@ RN-030 usa o *código* do funcionário como base: quem tem código 11 ganha R$ 2
 por venda e quem tem código 1 ganha R$ 0,20, independentemente do valor vendido.
 Não foi corrigida — três leituras são igualmente plausíveis (20% do item, 2% da
 compra, R$ 0,20 por peça) e nada decide entre elas. Fica isolada em
-`ComissaoVendaPeca()`, de três linhas: responder Q-10 é alterar uma linha.
+`ComissaoVendaPeca()`, de três linhas. **Q-10 foi respondida em 2026-08-25: manter.**
+A fórmula deixou de ser literal preservado e passou a ser regra confirmada.
 
 **D-07 corrigido:** a comissão vai para o funcionário informado. No legado, um
 `USE CVBFUNC` redundante reposicionava a tabela e creditava sempre o primeiro do
@@ -528,7 +529,8 @@ são dois conceitos separados, e a distinção é o ponto da onda:
 sempre do primeiro da tabela — está nos dados: o primeiro modelo tem 89 unidades
 e os demais 99, 99, 100, 100, embora as 23 vendas envolvam 4 modelos.
 
-**D-13 preservado (Q-12):** o reparo continua **não** baixando estoque de peças.
+**D-13 preservado (Q-12, respondida em 2026-08-25):** o reparo continua **não**
+baixando estoque de peças — agora por decisão, não por dúvida.
 `EstoqueReparoBaixa()` devolve `.F.` e existe para que a decisão, quando vier,
 tenha um lugar só para mudar.
 
@@ -855,7 +857,7 @@ comportava, e que cada afastamento é um dos declarados.
 | I.1 | A massa chega inteira: 22 clientes, 10 funcionários, 3 fornecedores, 4 peças, 5 modelos, 23 vendas de veículo, 75 itens, 5 cotas — com valores literais conferidos |
 | I.3 | Exclusão é marca lógica: some da view, do lookup e do relatório; permanece na tabela |
 | I.4 | Consultas na ordem por código, como os `.NTX`; o filtro RN-040 particiona os 22 clientes |
-| I.5 | As três fórmulas de comissão, literais — inclusive a anômala RN-030. Se alguém "consertar" sem responder Q-10, isto falha |
+| I.5 | As três fórmulas de comissão, literais — inclusive a anômala RN-030, confirmada como regra em Q-10. Se alguém a "consertar", isto falha |
 | I.7 | Os dez relatórios emitem sobre a massa real; R-09, que era inoperante, lista as 3 cotas fechadas |
 | I.8 | Código 0, código máximo, campos vazios, estoque zero, tabela vazia |
 | I.9 | Os erros conhecidos **estão lá**, com a classificação prevista: 140 inconsistências, `cpf` nulo nos 22 com original preservado, `'**'` em `*_legado`, datas de 1901 importadas como estão |
@@ -926,12 +928,12 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 | Venda de peças — cadastro de cliente em linha | Defeituoso (D-06) | OK | OK | **Concluído** — sem D-06 |
 | Venda de peças — subtotal e total | Parcial (D-17) | OK | OK | **Concluído** — cabeçalho + itens |
 | Reparo de autos — grade de itens | OK | OK | OK | **Concluído** |
-| Reparo — baixa de estoque | **Ausente** (D-13) | — | — | Preservado ausente — **Q-12 aberta** |
+| Reparo — baixa de estoque | **Ausente** (D-13) | OK | OK | **Concluído** — ausência confirmada (Q-12) |
 | Pronta entrega — venda | OK | OK | OK | **Concluído** |
 | Pronta entrega — baixa de frota | Defeituoso (D-08) | OK | OK | **Concluído** — sem D-08 |
 | Pronta entrega — aviso de último veículo | OK | OK | OK | **Concluído** — RN-035 |
-| Comissão — venda de peças | **Indefinido** (D-05) + destino errado (D-07) | OK | OK | **Concluído** — fórmula literal, destino corrigido, **Q-10 aberta** |
-| Comissão — reparo | **Indefinido** (D-05) + destino errado (D-07) | OK | OK | **Concluído** — mesma fórmula, destino corrigido, **Q-10 aberta** |
+| Comissão — venda de peças | **Indefinido** (D-05) + destino errado (D-07) | OK | OK | **Concluído** — fórmula confirmada (Q-10), destino corrigido |
+| Comissão — reparo | **Indefinido** (D-05) + destino errado (D-07) | OK | OK | **Concluído** — mesma fórmula (Q-10), destino corrigido |
 | Comissão — pronta entrega (1,5%) | Defeituoso (D-07) | OK | OK | **Concluído** — sem D-07 |
 | Comissão — consórcio (0,15%) | OK | OK | OK | **Concluído** — creditada na adesão |
 
@@ -1036,7 +1038,7 @@ Complementos medidos:
 | Linhas de código em `src/` | 10.109 |
 | Linhas de teste em `tests/` | 4.537 |
 | Documentos de engenharia reversa | 12 |
-| Questões abertas registradas | 12 (Q-01..Q-12) |
+| Questões registradas | 12 (Q-01..Q-12), das quais **2 respondidas** |
 | Inconsistências de dados documentadas | 140 |
 
 ### 6.2 Percentual de conclusão
@@ -1046,18 +1048,18 @@ estado de cada uma — não por impressão:
 
 | Estado | Quantidade |
 |---|---:|
-| **Concluído** (implementado **e** validado) | **71** |
+| **Concluído** (implementado **e** validado) | **72** |
 | Não portado por decisão documentada | 3 |
 | Substituído por operação equivalente | 1 |
 | Não aplicável ao modelo relacional | 1 |
-| Preservado ausente por questão aberta | 1 |
+
 | **Não iniciado** | **0** |
 
 ```text
-% de conclusão = 71 / 77 = 92,2 %
+% de conclusão = 72 / 77 = 93,5 %
 ```
 
-**Das 6 restantes, nenhuma está pendente de trabalho** — todas são decisões
+**Das 5 restantes, nenhuma está pendente de trabalho** — todas são decisões
 registradas:
 
 | Funcionalidade | Estado | Por quê |
@@ -1067,11 +1069,10 @@ registradas:
 | Mouse | não portado | Dependia da biblioteca DOS; sem equivalente no terminal |
 | `PACK` na saída | substituído | Virou `--purgar`, deliberado e com backup (D-15) |
 | Auto-reconstrução de índices | não aplicável | O SQLite mantém os próprios |
-| Reparo — baixa de estoque | preservado ausente | **Q-12** aguarda decisão de negócio (D-13) |
 
-Excluindo as 5 decisões de não-portar e a substituição, **71 de 72
-funcionalidades portáveis estão concluídas (98,6 %)**; a única fora é a que
-depende de Q-12.
+
+Excluindo as 4 decisões de não-portar e a substituição, **72 de 72
+funcionalidades portáveis estão concluídas (100 %)**.
 
 ### 6.3 Os 9 critérios do briefing §32
 
@@ -1079,7 +1080,7 @@ depende de Q-12.
 |---|---|:-:|---|
 | 1 | Funcionalidades do legado identificadas | ✅ | 45 `.PRG` e 23 `.DBF` inventariados em `00`; 77 funcionalidades na matriz §5 |
 | 2 | Regras de negócio documentadas | ✅ | 42 regras em `03`, cada uma com arquivo e linha do legado |
-| 3 | Funcionalidades implementadas | ✅ | 71 concluídas; 6 decisões registradas; 0 pendentes |
+| 3 | Funcionalidades implementadas | ✅ | 72 concluídas; 5 decisões registradas; 0 pendentes |
 | 4 | Dados migráveis | ✅ | `make migrate`: 185 lidos, 222 gravados, 892 campos conferidos, 0 divergências |
 | 5 | Validações implementadas | ✅ | V-01..V-20, verificadas nominalmente na FASE H |
 | 6 | Testes executados | ✅ | 18 suítes, 1.027 asserções, todas passando (`make test`) |
@@ -1104,11 +1105,16 @@ Três limites, ditos para que a conclusão signifique o que diz:
    citação de arquivo e linha e conferido contra os dados, mas ainda assim é a
    documentação, não o binário em execução.
 
-3. **Duas questões de negócio seguem abertas** e afetam comportamento:
-   **Q-10** (qual é a base correta da comissão sobre venda de peças — hoje o
-   *código* do funcionário, literal do legado) e **Q-12** (se o reparo deve
-   baixar estoque — hoje não baixa, literal do legado). Ambas isoladas em uma
-   função cada, de propósito: responder qualquer uma é alterar uma linha.
+3. **Nenhuma questão de negócio afeta mais o comportamento.** As duas que
+   afetavam — **Q-10** (base da comissão sobre venda de peças) e **Q-12** (se o
+   reparo baixa estoque) — foram **respondidas em 2026-08-25**: manter o
+   comportamento do legado, nos dois casos. Deixaram de ser literais preservados
+   à espera de decisão e passaram a ser regra confirmada.
+
+   Vale registrar o que isso significa para Q-12: o responsável não recuperou a
+   intenção original, o que é esperado num sistema de 32 anos. Pelo método do
+   projeto essa é a resposta correta — preserva-se o literal e registra-se a
+   decisão, em vez de escolher a leitura que parece mais razoável.
 
 As outras dez questões (Q-01..Q-09, Q-11) estão registradas e não afetam o
 comportamento implementado.
@@ -1121,7 +1127,7 @@ comportamento implementado.
 | RI-02 | ~~`hbsqlit3` ausente~~ **FECHADO** (2026-08-24) | — | — | `libhbsqlit3.a` presente; `schema.sql` e `views.sql` aplicados por `sqlite3_exec()` de dentro do Harbour |
 | RI-02b | ~~SQLite < 3.37 dentro do `hbsqlit3`~~ **FECHADO** (2026-08-24) | — | — | `sqlite3_libversion()` = `3.46.1`; `STRICT` verificado rejeitando texto em coluna `INTEGER`. Fallback de `database/README.md` não será necessário |
 | RI-10 | D-27 (estoque não-negativo) rejeitada pelo negócio | Baixa | Baixo | Alternativa registrada em D-27: trocar `CHECK` por aviso — 1 linha no schema, 1 no serviço |
-| RI-03 | Q-10 (comissão) resolvida tarde, invalidando dados gerados | Baixa | Médio | Fórmula isolada em `services/comissao.prg`; trocar é uma linha |
+| RI-03 | ~~Q-10 resolvida tarde~~ **FECHADO** (2026-08-25) | — | — | Respondida: manter a fórmula do legado. Nenhum dado gerado foi invalidado |
 | RI-04 | Q-02 (agrupamento de itens) heurística produz agrupamento errado | Alta | Médio | `origem='INDETERMINADO'`; agrupamento auditável no relatório; reexecutável |
 | RI-05 | D-25 (renumeração de cotas) rejeitada pelo negócio | Média | Baixo | Opção `--novo-grupo-para-ativos` prevista |
 | RI-06 | Regressão exige reproduzir defeitos (D-05, D-13) que o negócio quer corrigir | Média | Médio | Divergências documentadas; correção é decisão, não descoberta |
@@ -1189,31 +1195,27 @@ O projeto só será declarado concluído quando **todos** os 9 critérios forem 
 
 | | |
 |---|---:|
-| Funcionalidades concluídas | 71 de 77 (92,2 %) |
-| Funcionalidades portáveis concluídas | 71 de 72 (98,6 %) |
+| Funcionalidades concluídas | 72 de 77 (93,5 %) |
+| Funcionalidades portáveis concluídas | **72 de 72 (100 %)** |
 | Pendentes de trabalho | **0** |
 | Suítes de teste | 18 |
 | Asserções | 1.027 |
 | Divergências documentadas | 29 |
-| Questões abertas | 12, das quais 2 afetam comportamento |
+| Questões registradas | 12 · as 2 que afetavam comportamento foram respondidas |
 
 O que ficou de fora está em §6.2 e §6.4, e nenhum item é omissão: são cinco
 decisões de não-portar (etiqueta, splash gráfico, mouse, `PACK`, reconstrução de
-índices) e uma que aguarda decisão de negócio (Q-12).
+índices).
 
 ### O que fazer a seguir
 
 Nenhum destes é bloqueio; são os próximos passos naturais, em ordem de valor:
 
-1. **Responder Q-10 e Q-12.** São as duas decisões de negócio pendentes. Cada
-   uma está isolada numa função — `ComissaoVendaPeca()` e
-   `EstoqueReparoBaixa()` — e responder é alterar uma linha. Enquanto não vierem,
-   o sistema reproduz o legado literalmente, inclusive a fórmula anômala.
-2. **Verificar os fluxos interativos à mão.** Abrir `bin/sccv` num terminal e
+1. **Verificar os fluxos interativos à mão.** Abrir `bin/sccv` num terminal e
    percorrer os quatro fluxos de `04-FLUXOS.md`. É o único ponto em que a
    cobertura automatizada não chega.
-3. **Fechar o arnês de teste de tela com `hb_keyPut()`**, se a verificação
+2. **Fechar o arnês de teste de tela com `hb_keyPut()`**, se a verificação
    manual apontar valor nisso.
-4. **Q-11** — os relatórios que o legado nunca teve (comissões por funcionário,
+3. **Q-11** — os relatórios que o legado nunca teve (comissões por funcionário,
    itens abaixo do mínimo, grupos em formação, movimento por período). Todos os
    dados existem; falta a decisão de criá-los.

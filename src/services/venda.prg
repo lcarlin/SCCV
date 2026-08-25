@@ -161,12 +161,12 @@ FUNCTION VendaPecaTotal( hVenda )
  * numa transação.
  *
  * D-13 / Q-12 — o REPARO não baixa estoque. A venda de balcão baixa
- * (CVMTVPEC.PRG:117); o reparo não (ausência de REPLACE QTDPEC em CVMTVREP).
- * Nenhuma evidência decide se é omissão ou intenção, então fica como está e a
- * condição está aqui, explícita e num lugar só.
+ * (CVMTVPEC.PRG:117); o reparo não. Confirmado pelo responsável em 2026-08-25:
+ * fica como no legado. A condição está aqui, explícita e num lugar só.
  *
  * RN-030 — a comissão usa o CÓDIGO do funcionário como base. Fórmula anômala,
- * preservada, isolada em ComissaoVendaPeca(). Ver Q-10.
+ * confirmada como regra em Q-10, isolada em ComissaoVendaPeca(). O DESTINO,
+ * esse, foi corrigido: o legado creditava o primeiro funcionário (D-07).
  */
 FUNCTION VendaGravar( pDb, hVenda )
 

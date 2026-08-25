@@ -161,14 +161,14 @@ STATIC PROCEDURE I4_Consultas( pDb )
    RETURN
 
 /*
- * I.5 — os cálculos. As fórmulas são LITERAIS do legado, inclusive a anômala.
- * Se alguém "consertar" RN-030 sem responder Q-10, isto falha.
+ * I.5 — os cálculos. As fórmulas são LITERAIS do legado, inclusive a anômala
+ * RN-030, confirmada como regra em Q-10. Se alguém a "consertar", isto falha.
  */
 STATIC PROCEDURE I5_Calculos( pDb )
 
    ? "== I.5 — cálculos com as fórmulas literais =="
 
-   /* RN-030 — base é o CÓDIGO do funcionário (D-05, Q-10) */
+   /* RN-030 — base é o CÓDIGO do funcionário (D-05; confirmada em Q-10) */
    Vale( "RN-030: código 1 → R$ 0,20", ComissaoVendaPeca( 1 ), 20 )
    Vale( "RN-030: código 11 → R$ 2,20", ComissaoVendaPeca( 11 ), 220 )
    /* RN-031 — 1,5% do valor do veículo; VALCAR real do acervo */
@@ -357,7 +357,7 @@ STATIC PROCEDURE AuditoriaDivergencias( pDb )
       ModeloObter( pDb, PecaDescritor(), 1 ) != NIL )
    D( "D-02", "lookup RETORNA o código, não preenche por macro", ;
       Len( LookupLinhas( pDb, "cliente" ) ) > 0 )
-   D( "D-05", "comissão de peças usa o código (preservada, Q-10)", ;
+   D( "D-05", "comissão de peças usa o código (confirmada em Q-10)", ;
       ComissaoVendaPeca( 11 ) == 220 )
    /*
     * D-07 alcança TRÊS programas: pronta entrega, venda de peças e reparo. Os
@@ -377,7 +377,7 @@ STATIC PROCEDURE AuditoriaDivergencias( pDb )
                        " AND parcelas_restantes IS NOT NULL" ) == 0 )
    D( "D-12", "grupo fechado numa tabela só", ;
       SqlEscalar( pDb, "SELECT count(*) FROM consorcio_cota WHERE grupo_fechado = 1" ) == 3 )
-   D( "D-13", "reparo não baixa estoque (preservado, Q-12)", !EstoqueReparoBaixa() )
+   D( "D-13", "reparo não baixa estoque (confirmado em Q-12)", !EstoqueReparoBaixa() )
    D( "D-17", "venda tem cabeçalho e itens", ;
       SqlEscalar( pDb, "SELECT count(*) FROM venda_peca" ) > 0 .AND. ;
       SqlEscalar( pDb, "SELECT count(*) FROM venda_peca_item" ) > 0 )

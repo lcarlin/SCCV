@@ -4,10 +4,14 @@
  * As três fórmulas de comissão do legado, isoladas. Regras RN-030, RN-031 e
  * RN-032; divergências D-05 e D-07.
  *
- * ESTÃO ISOLADAS DE PROPÓSITO. Uma delas (RN-030) é reconhecidamente anômala e
- * a intenção original não é determinável — Q-10. Mantê-la numa função de três
- * linhas, com o cálculo em um único lugar, é o que torna a decisão do negócio
- * uma alteração de uma linha quando ela vier.
+ * ESTÃO ISOLADAS DE PROPÓSITO. Uma delas (RN-030) é reconhecidamente anômala: a
+ * base de cálculo é o CÓDIGO do funcionário. A intenção original não era
+ * determinável, e a questão foi escalada como Q-10 — **respondida pelo
+ * responsável em 2026-08-25: manter a fórmula do legado.**
+ *
+ * Ela deixou de ser um literal preservado à espera de decisão e passou a ser
+ * regra de negócio confirmada. Continua isolada em três linhas, mas agora pelo
+ * motivo ordinário: fórmula de comissão é o tipo de regra que muda com o tempo.
  *
  * ARREDONDAMENTO
  * --------------
@@ -29,10 +33,14 @@
  * (1500,80 · 534,75 · 297,75 · 10,50 · 6,35) não guardam relação proporcional
  * com nenhum valor de venda, o que confirma a leitura do código.
  *
- * NÃO É CORRIGIDA AQUI. Três leituras são igualmente plausíveis — 20% do item,
- * 2% da compra, R$ 0,20 por peça — e nenhuma evidência decide entre elas. O
- * briefing §2 é explícito: não introduzir regra por parecer razoável.
- * Ver 09/D-05 e a questão Q-10.
+ * NÃO FOI CORRIGIDA. Três leituras eram igualmente plausíveis — 20% do item,
+ * 2% da compra, R$ 0,20 por peça — e nenhuma evidência decidia entre elas. A
+ * questão foi levada ao responsável com os números que cada hipótese produziria
+ * sobre o acervo, e a decisão (Q-10, 2026-08-25) foi **manter esta fórmula**.
+ *
+ * O destino, esse sim, foi corrigido: no legado a comissão era creditada ao
+ * primeiro funcionário do arquivo, não ao informado (D-07, que alcança este
+ * programa, CVMTVREP e CVMTPENT). Ver 09/D-05 e 09/D-07.
  */
 FUNCTION ComissaoVendaPeca( nCodFun )
 

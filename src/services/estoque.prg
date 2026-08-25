@@ -189,10 +189,20 @@ FUNCTION EstoqueRepor( pDb, cTabela, cChave, nCodigo, nQuantidade )
  * D-13 / Q-12 — o reparo NÃO baixa estoque de peças.
  *
  * A venda de balcão baixa (CVMTVPEC.PRG:117); o reparo não (ausência de
- * REPLACE QTDPEC em CVMTVREP). Duas leituras plausíveis: omissão, ou peças de
- * reparo saindo de outra origem — o CVBALMOX existe e nunca é baixado (Q-01).
- * Nenhuma evidência decide. Fica como no legado, e a função existe para que a
- * decisão, quando vier, tenha um lugar só para mudar.
+ * REPLACE QTDPEC em CVMTVREP). Duas leituras eram plausíveis: omissão, ou peças
+ * de reparo saindo de outra origem — o CVBALMOX existe e nunca é baixado.
+ *
+ * Q-12 foi levada ao responsável em 2026-08-25, com as três possibilidades
+ * (estoque de peças · almoxarifado · controle externo). **A intenção original
+ * não foi recuperada** — o que é esperado num sistema de 32 anos — e a decisão
+ * foi manter como está.
+ *
+ * Pelo método do projeto essa é a resposta certa quando a memória não alcança:
+ * preserva-se o literal e registra-se a decisão, em vez de escolher a leitura
+ * que parece mais razoável (briefing §2). A função continua aqui: se a intenção
+ * for recuperada algum dia, há um lugar único para mudar.
+ *
+ * Q-01 segue aberta — o almoxarifado continua sem evento que o consuma.
  */
 FUNCTION EstoqueReparoBaixa()
    RETURN .F.

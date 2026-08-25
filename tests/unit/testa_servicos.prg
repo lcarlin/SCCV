@@ -4,10 +4,11 @@
  * services/comissao.prg (RN-030, RN-031, RN-032; D-05, D-07)
  * services/estoque.prg  (RN-028, RN-029, RN-034, RN-035; D-08, D-13, D-27)
  *
- * Boa parte destas asserções existe para PROTEGER comportamento defeituoso do
- * legado que foi deliberadamente preservado. Se alguém "consertar" RN-030 por
- * achar que 20% do item faz mais sentido, este teste falha — que é exatamente
- * o que deve acontecer enquanto Q-10 não for respondida pelo negócio.
+ * Boa parte destas asserções existe para PROTEGER comportamento do legado que
+ * foi deliberadamente preservado. Se alguém "consertar" RN-030 por achar que 20%
+ * do item faz mais sentido, este teste falha — e deve falhar: Q-10 foi
+ * respondida em 2026-08-25 e a fórmula do legado é a regra confirmada, não um
+ * literal à espera de decisão.
  */
 
 #require "hbsqlit3"
@@ -58,7 +59,7 @@ STATIC PROCEDURE Semear( pDb )
 
 STATIC PROCEDURE TestaFormulas()
 
-   ? "== RN-030 — venda de peças (D-05, Q-10: fórmula anômala PRESERVADA) =="
+   ? "== RN-030 — venda de peças (D-05; fórmula confirmada em Q-10) =="
 
    /* a base é o CÓDIGO do funcionário, não o valor vendido */
    Vale( "código 1 → R$ 0,20", ComissaoVendaPeca( 1 ), 20 )
@@ -158,8 +159,8 @@ STATIC PROCEDURE TestaEstoque( pDb )
    Vale( "almoxarifado usa o mesmo serviço", ;
          EstoqueBaixarAlmoxarifado( pDb, 1, 10 )[ "saldo" ], 90 )
 
-   /* D-13 / Q-12 — reparo não baixa estoque, como no legado */
-   Vale( "D-13: reparo NÃO baixa estoque (Q-12 em aberto)", EstoqueReparoBaixa(), .F. )
+   /* D-13 — reparo não baixa estoque; confirmado em Q-12 (2026-08-25) */
+   Vale( "D-13: reparo NÃO baixa estoque (confirmado em Q-12)", EstoqueReparoBaixa(), .F. )
 
    RETURN
 

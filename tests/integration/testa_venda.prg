@@ -141,7 +141,7 @@ STATIC PROCEDURE TestaBalcao( pDb )
    Vale( "estoque da peça 2: 8 - 2", ;
          EstoqueSaldo( pDb, "peca", "cod_pec", 2 )[ "atual" ], 6 )
 
-   /* RN-030: comissão pelo CÓDIGO do funcionário (Q-10) */
+   /* RN-030: comissão pelo CÓDIGO do funcionário (confirmada em Q-10) */
    Vale( "RN-030: comissão = código 11 × R$ 0,20", ComissaoAcumulada( pDb, 11 ), 220 )
    Vale( "D-07: o funcionário 1 não recebeu nada", ComissaoAcumulada( pDb, 1 ), 0 )
 
@@ -151,7 +151,7 @@ STATIC PROCEDURE TestaReparo( pDb )
 
    LOCAL hVenda, hRes, nAntes
 
-   ? "== reparo: grava, mas NÃO baixa estoque (D-13 / Q-12) =="
+   ? "== reparo: grava, mas NÃO baixa estoque (D-13, confirmado em Q-12) =="
 
    nAntes := EstoqueSaldo( pDb, "peca", "cod_pec", 1 )[ "atual" ]
    hVenda := VendaNova( "REPARO", 7, "BatMan", 11 )
