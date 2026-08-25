@@ -133,7 +133,7 @@ STATIC FUNCTION AcaoImplementada( cAcao )
                    "consorcio", ;
                    "cliente.relatorio", "funcionario.relatorio", ;
                    "fornecedor.relatorio", "relatorio.estoques", ;
-                   "relatorio.servicos" }, ;
+                   "relatorio.servicos", "graficos" }, ;
                  {| x | x == cAcao } ) > 0
 
 STATIC FUNCTION Despachar( cAcao )
@@ -186,6 +186,8 @@ STATIC FUNCTION DespacharAcao( pDb, cAcao )
       RelatorioSubmenu( pDb, { "R-04", "R-05", "R-06" } )
    CASE cAcao == "relatorio.servicos"
       RelatorioSubmenu( pDb, { "R-07", "R-08", "R-09", "R-10" } )
+   CASE cAcao == "graficos"
+      GraficoMenu( pDb )
    OTHERWISE
       Mensagem( "Destino '" + cAcao + "' ainda não implementado" )
    ENDCASE

@@ -47,7 +47,7 @@ FUNCTION MenuDefinicao()
          { "titulo" => "Almoxarifado" , "acao" => "almoxarifado.manutencao" }, ;
          { "titulo" => "Frota"        , "acao" => "modelo.manutencao"       }, ;
          { "titulo" => "Relatórios"   , "acao" => "relatorio.estoques" }, ;
-         { "titulo" => "Gráficos"     , "acao" => NIL } } } }
+         { "titulo" => "Gráficos"     , "acao" => "graficos" } } } }
 
 /* Quantos destinos existem, e quantos já têm ação — para o resumo de estado. */
 FUNCTION MenuCobertura( bImplementada )

@@ -22,12 +22,13 @@ ORIGEM    ?= legacy
 DESTINO   ?= sccv.db
 
 # validacao.prg é pura (só lógica); integridade.prg consulta o banco
-REL_SRC   := src/reports/relatorio.prg src/reports/definicoes.prg
+REL_SRC   := src/reports/relatorio.prg src/reports/definicoes.prg \
+             src/reports/grafico.prg
 
 UI_SRC    := src/ui/tela.prg src/ui/menu.prg src/ui/lookup.prg \
              src/ui/formulario.prg src/ui/browse.prg src/ui/cadastro.prg \
              src/ui/movimento.prg src/ui/tela_consorcio.prg \
-             src/ui/tela_relatorio.prg
+             src/ui/tela_relatorio.prg src/ui/tela_grafico.prg
 
 SRV_SRC   := src/services/comissao.prg src/services/estoque.prg \
              src/services/venda.prg src/services/consorcio.prg
@@ -53,7 +54,7 @@ MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
 TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao \
              testa_verificacao testa_infra testa_validacao testa_ui \
              testa_cadastro testa_servicos testa_venda testa_consorcio \
-             testa_relatorios
+             testa_relatorios testa_graficos
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda run install desinstalar
 
@@ -153,6 +154,9 @@ $(BIN)/testa_consorcio: tests/integration/testa_consorcio.prg $(APP_SRC) | $(BIN
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_relatorios: tests/integration/testa_relatorios.prg $(APP_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+$(BIN)/testa_graficos: tests/integration/testa_graficos.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # --- utilidades -------------------------------------------------------

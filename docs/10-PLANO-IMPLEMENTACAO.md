@@ -401,7 +401,7 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 | **5** ✅ | Movimento: **venda de peças (balcão)**, **reparo**, **pronta entrega** | 3, 4 |
 | **6** ✅ | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
 | **7** ✅ | Relatórios R-01..R-10 | 2–6 |
-| **8** | Gráficos R-11, R-12 (barras + CSV) | 5 |
+| **8** ✅ | Gráficos R-11, R-12 (barras + CSV) | 5 |
 | **9** | Comandos administrativos: `--purgar`, `--backup`, `--restore`, `--verificar` | todos |
 
 Cada módulo entra em "concluído" apenas quando: implementado + validado + coberto por teste + registrado na matriz (§5).
@@ -673,6 +673,40 @@ quase todo cabeçalho. O motor passou a usar `hb_ULeft()`, `hb_UPadL()`,
 Etiquetas continuam **não implementadas** (D-21): os `.LBL` estão ausentes e o
 layout não é recuperável.
 
+#### Onda 8 — concluída em 2026-08-25
+
+Gráficos R-11 e R-12. 34 asserções em `tests/integration/testa_graficos.prg`.
+**19 dos 20 destinos do menu ligados** — só "Comissões" falta, e é uma das
+lacunas de Q-11.
+
+**Barras em caracteres, não pizza.** O legado desenhava pizza com as bibliotecas
+CLBC 2.7 e GIP 1.0 mais a fonte `8X8.BCM` — nenhuma delas existe no acervo, só
+os executáveis `BCVGA.EXE` e `BCRETCTR.EXE`, que não são fonte. Reproduzir a
+pizza exigiria escolher uma biblioteca gráfica nova e uma janela gráfica, para
+um sistema de terminal. A informação funcional — a distribuição das vendas por
+item — é preservada; a representação, que era limitação da época, não.
+
+**CR-08 / D-18 — o agregado vem de consulta.** Os gráficos liam `CVVCAR` e
+`CVVPEC`, tabelas mantidas incrementalmente e com chave **textual**. Estavam
+dessincronizadas em até 11.062 unidades: `TIPO 1.6 IE` no agregado nunca casou
+com `TIPO 1.6 IE 2 PORTAS` no cadastro, acumulando 12 vendas fantasma. Agora o
+número vem das views sobre o movimento real.
+
+**A divergência é mostrada, não escondida.** Como D-18 previu que os números
+mudariam, e mudança de número sem explicação é indistinguível de erro, o gráfico
+exibe o confronto: o que o movimento real diz, o que o agregado antigo dizia, e
+a observação de que ele ficou dessincronizado.
+
+**O título deixou de dizer "mensal".** Os gráficos do legado se chamavam "Venda
+Mensal", mas não há recorte temporal algum — `CVPECAS` não tem campo de data e
+as agregadas acumulavam desde sempre. Chamar de mensal um acumulado histórico é
+afirmar algo falso na tela. O recorte por período segue registrado em Q-11.
+
+**Detalhe do CSV:** o valor monetário usa **ponto** como separador decimal, não
+a vírgula brasileira — porque a vírgula é o separador de campo do arquivo, e
+`100,00` partiria a linha em duas colunas. Quem abre a planilha ajusta a
+localidade; um CSV quebrado não tem conserto.
+
 **Limite declarado:** os fluxos interativos (navegação, edição em tela) **não têm
 teste automatizado**. O que é testável foi separado do desenho e está coberto; o
 desenho depende de verificação à mão. Injeção por pseudo-terminal se mostrou não
@@ -782,8 +816,8 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 | R-08 Orçamentos | Duplicado de R-07 (CR-03) | OK | OK | **Concluído** — CR-03 |
 | R-09 Consórcios | **INOPERANTE** (B-16) | OK | OK | **Concluído** — CR-01, agora funciona |
 | R-10 Pronta entrega | OK (CR-07) | OK | OK | **Concluído** — CR-07 |
-| R-11 Gráfico de veículos | Inoperante (biblioteca ausente) | — | — | Não iniciado |
-| R-12 Gráfico de peças | Inoperante (biblioteca ausente) | — | — | Não iniciado |
+| R-11 Gráfico de veículos | Inoperante (biblioteca ausente) | OK | OK | **Concluído** — barras + CSV, agregado por consulta |
+| R-12 Gráfico de peças | Inoperante (biblioteca ausente) | OK | OK | **Concluído** — barras + CSV, agregado por consulta |
 | Destino: tela | OK | — | — | Não iniciado |
 | Destino: impressora | OK (matricial) | — | — | Não iniciado |
 | Destino: arquivo | **Ausente** | — | — | Não iniciado |
