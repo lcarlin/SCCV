@@ -388,7 +388,7 @@ diretório depois não muda para onde a aplicação escreve.
 SQLite **converte** `INTEGER` e `REAL` para texto — só o inverso é erro. Está
 documentado no teste, porque é fácil supor simetria e não há.
 
-### FASE G — Implementação dos módulos
+### FASE G — Implementação dos módulos — **CONCLUÍDA** (2026-08-25)
 
 Ordem obrigatória, **por dependência** (`07` §2.2):
 
@@ -402,7 +402,7 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 | **6** ✅ | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
 | **7** ✅ | Relatórios R-01..R-10 | 2–6 |
 | **8** ✅ | Gráficos R-11, R-12 (barras + CSV) | 5 |
-| **9** | Comandos administrativos: `--purgar`, `--backup`, `--restore`, `--verificar` | todos |
+| **9** ✅ | Comandos administrativos: `--purgar`, `--backup`, `--restore`, `--verificar` | todos |
 
 Cada módulo entra em "concluído" apenas quando: implementado + validado + coberto por teste + registrado na matriz (§5).
 
@@ -707,6 +707,54 @@ a vírgula brasileira — porque a vírgula é o separador de campo do arquivo, 
 `100,00` partiria a linha em duas colunas. Quem abre a planilha ajusta a
 localidade; um CSV quebrado não tem conserto.
 
+#### Onda 9 — concluída em 2026-08-25
+
+Comandos administrativos. 49 asserções em `tests/integration/testa_admin.prg`.
+**Encerra a FASE G.**
+
+| Comando | O que faz |
+|---|---|
+| `sccv --backup` | Cópia física pela API de backup do SQLite |
+| `sccv --dump <arq>` | Cópia lógica em SQL, versionável e recarregável |
+| `sccv --restore <arq>` | Confere o backup **antes** e preserva o atual em `.bak` |
+| `sccv --verificar` | `integrity_check`, `foreign_key_check` e contagens |
+| `sccv --purgar [--simular]` | Apaga definitivamente os excluídos, com backup obrigatório |
+
+**D-15 — a purga deixou de ser efeito colateral de sair do sistema.** No legado,
+`SAIDA()` executava `PACK` em `CVBCLIEN`, `CVBFORNE` e `CVBFUNC` ao encerrar:
+exclusão física, irreversível, sem backup e sem verificar dependências. Um
+`PACK` interrompido corrompia o arquivo. Agora sair encerra a aplicação e mais
+nada; a purga é deliberada e tem três garantias que o `PACK` não tinha:
+
+1. **backup obrigatório**, não desativável — se ele falhar, a purga não ocorre;
+2. registro ainda referenciado **não é purgado**, é relatado com o motivo (V-17);
+3. tudo numa transação — purga interrompida não deixa o banco pela metade.
+
+`--simular` mostra o que seria apagado sem apagar nada.
+
+**A cópia de banco usa a API do próprio SQLite**, não cópia de arquivo. Funciona
+com o banco aberto e em uso, e o destino é necessariamente um banco válido —
+copiar bytes de um arquivo em escrita poderia produzir algo truncado no meio de
+uma transação. O restore usa a mesma API nas duas pontas: preserva o atual e
+grava o novo.
+
+**Três defeitos encontrados escrevendo esta onda:**
+
+1. `hb_vfCopyFile()` não devolve lógico, e `IF !hb_vfCopyFile(...)` derrubava o
+   processo. Resolvido usando a API de backup, que era o meio certo desde o
+   início.
+2. **`==` contra `NIL` levanta erro de tipo** quando a variável contém string —
+   `!=` tolera, `==` não. Onde o valor pode ser texto ou nada, usar `Empty()`.
+3. **O Harbour não interpreta `\` em string literal** como o C: a cláusula
+   `LIKE '\_%' ESCAPE '\'` virava dois caracteres onde o SQL exige um, e a
+   consulta falhava em silêncio, devolvendo lista vazia. Trocado por `substr()`.
+
+E um cuidado que virou verificação: `sqlite3_open()` aceita **qualquer** arquivo
+e só descobre que não é um banco na primeira consulta. O restore confere o
+cabeçalho (`SQLite format 3`) antes de qualquer coisa, e depois confere que o
+banco é mesmo do S.C.C.V. — restaurar um arquivo alheio sobre o banco bom troca
+um problema por dois.
+
 **Limite declarado:** os fluxos interativos (navegação, edição em tela) **não têm
 teste automatizado**. O que é testável foi separado do desenho e está coberto; o
 desenho depende de verificação à mão. Injeção por pseudo-terminal se mostrou não
@@ -990,29 +1038,26 @@ O projeto só será declarado concluído quando **todos** os 9 critérios forem 
 
 ## 11. Próximo passo
 
-**FASES A a F concluídas.** A infraestrutura está de pé e o legado está migrado
-e verificado. `make test` roda seis suítes de aceite — 23 arquivos conferidos,
-100 + 35 + 48 + 56 + 75 asserções — todas passando.
+**FASES A a G concluídas.** As nove ondas da FASE G estão fechadas: 19 dos 20
+destinos do menu funcionam, e o único desligado — relatório de comissões — é uma
+lacuna que o **legado nunca teve** (Q-11), registrada e não criada por decisão de
+método.
 
 | | |
 |---|---|
-| `make` | compila `bin/sccv` e `bin/sccv-migrar` |
-| `make run` | estado do ambiente e do banco |
-| `make migrate` | `legacy/` → SQLite, 222 registros |
-| `make verificar` | 56 pontos contra os arquivos originais |
-| `make test` | as seis suítes de aceite |
-| `make check-deps` | Harbour, hbsqlit3, SQLite, GCC, flags |
+| Suítes de teste | 15, todas passando (`make test`) |
+| Destinos do menu | 19 de 20 |
+| Matriz §5 | 12 linhas pendentes |
 
-**Próxima: FASE G — implementação dos módulos**, por ordem de dependência.
+**Próxima: FASE H — validações.** Na prática já está quase toda entregue: V-01 a
+V-19 foram implementadas na onda 1 e cobertas por 101 asserções, e as regras de
+estoque e comissão vieram na onda 4. O que falta é **consolidar o registro** e
+conferir uma a uma contra `05` §8, incluindo as três que alteram comportamento
+observável (V-10, V-11, V-15).
 
-É onde o trabalho muda de natureza. Até aqui, tudo tinha uma resposta
-determinável: ou o legado dizia, ou os dados diziam. Da FASE G em diante, as
-**12 questões abertas (Q-01..Q-12)** deixam de ser anotação e passam a bloquear
-código concreto, uma a uma, conforme cada módulo as encontra. Elas precisam de
-decisão de negócio, não de mais engenharia reversa — e o momento certo de
-levantar cada uma é quando o módulo que depende dela for implementado, não todas
-de uma vez agora.
+Depois: **FASE I — regressão**, comparando o comportamento do sistema novo com o
+do legado sobre a mesma massa de dados; e **FASE J — auditoria final**.
 
-As mesmas 27 divergências (D-01..D-27) já classificadas continuam valendo como
-contrato: onde o sistema novo se afasta do legado, a diferença está registrada e
-é rastreável.
+As duas questões abertas que dependem de decisão de negócio continuam de pé, sem
+bloquear: **Q-10** (base da comissão sobre venda de peças) e **Q-12** (se o
+reparo deve baixar estoque). Ambas isoladas em uma função, de propósito.

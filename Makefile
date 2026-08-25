@@ -44,6 +44,7 @@ VAL_PURA  := src/validation/validacao.prg
 VAL_SRC   := $(VAL_PURA) src/validation/integridade.prg
 
 APP_SRC   := src/app/config.prg src/app/log.prg src/app/erro.prg \
+             src/app/admin.prg \
              src/database/conexao.prg src/database/transacao.prg \
              src/database/sql.prg $(VAL_SRC) $(UI_SRC) $(MOD_SRC) $(SRV_SRC) $(REL_SRC)
 
@@ -54,7 +55,7 @@ MIG_SRC   := src/migration/carregador.prg src/migration/extrator.prg \
 TESTES    := testa_extrator testa_normalizador testa_inconsistencia testa_migracao \
              testa_verificacao testa_infra testa_validacao testa_ui \
              testa_cadastro testa_servicos testa_venda testa_consorcio \
-             testa_relatorios testa_graficos
+             testa_relatorios testa_graficos testa_admin
 
 .PHONY: all migrate verificar relatorio test clean check-deps ajuda run install desinstalar
 
@@ -157,6 +158,9 @@ $(BIN)/testa_relatorios: tests/integration/testa_relatorios.prg $(APP_SRC) | $(B
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 $(BIN)/testa_graficos: tests/integration/testa_graficos.prg $(APP_SRC) | $(BIN)
+	$(HBMK2) $^ $(HBFLAGS) -o$@
+
+$(BIN)/testa_admin: tests/integration/testa_admin.prg $(APP_SRC) | $(BIN)
 	$(HBMK2) $^ $(HBFLAGS) -o$@
 
 # --- utilidades -------------------------------------------------------

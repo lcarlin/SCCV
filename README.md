@@ -13,7 +13,7 @@ em CA-Clipper Summer '87 / DOS (1994), para **Harbour + SQLite + Linux**.
 | **D — Migração DBF → SQLite** | ✅ concluída — `make migrate` · 222 registros |
 | **E — Testes de migração** | ✅ concluída — 892 campos, 0 divergências |
 | **F — Infraestrutura Harbour** | ✅ concluída — `bin/sccv` sobe e se apresenta |
-| **G — Implementação dos módulos** | 🔄 ondas 1–8 de 9 — 19 de 20 destinos do menu |
+| **G — Implementação dos módulos** | ✅ concluída — 9 ondas · 19 de 20 destinos do menu |
 | H–J — Validações, regressão, auditoria | não iniciadas |
 
 A migração está pronta e verificada — 185 registros lidos, 222 gravados, 892
@@ -40,6 +40,7 @@ database/    schema.sql · views.sql · migrations/
 src/
   main.prg   ponto de entrada da aplicação
   app/       config.prg (F.6) · log.prg (F.5) · erro.prg (F.4)
+             admin.prg — backup, dump, restore, verificação e purga
   database/  conexao.prg (F.2) · transacao.prg (F.3) · sql.prg
   migration/ extrator.prg (D.1) — leitura fiel dos .DBF via RDD DBFNTX
              normalizador.prg (D.2) — CP860, datas, centavos, CPF/CNPJ/CEP/tel
@@ -114,6 +115,9 @@ sqlite3 sccv.db < database/views.sql
 make                  # compila bin/sccv e bin/sccv-migrar
 make run              # estado do ambiente e do banco
 bin/sccv --config-mostrar     # configuração efetiva e de onde veio
+bin/sccv --verificar          # integridade, FKs e contagens
+bin/sccv --backup             # cópia física · --dump <arq> gera SQL
+bin/sccv --purgar --simular   # o que uma purga apagaria (sem apagar)
 make install          # instala em ~/.local/bin (PREFIX=...)
 ```
 

@@ -45,6 +45,13 @@ PROCEDURE Main( ... )
       RETURN
    ENDIF
 
+   /* --restore roda ANTES de abrir o banco: ele substitui o arquivo, e abrir
+      o destino primeiro deixaria uma conexão apontando para o arquivo trocado */
+   IF hArg[ "restore" ] != NIL
+      ErrorLevel( CmdRestore( hArg ) )
+      RETURN
+   ENDIF
+
    nSaida := Iniciar( hArg )
    IF nSaida != SAIDA_OK
       ErrorLevel( nSaida )
@@ -54,6 +61,10 @@ PROCEDURE Main( ... )
    DO CASE
    CASE hArg[ "config_mostrar" ] ; nSaida := MostrarConfig()
    CASE hArg[ "estado" ]         ; nSaida := Estado()
+   CASE hArg[ "backup" ]         ; nSaida := CmdBackup()
+   CASE hArg[ "dump" ] != NIL    ; nSaida := CmdDump( hArg[ "dump" ] )
+   CASE hArg[ "verificar" ]      ; nSaida := CmdVerificar()
+   CASE hArg[ "purgar" ]         ; nSaida := CmdPurgar( hArg[ "simular" ] )
    OTHERWISE                     ; nSaida := Aplicacao()
    ENDCASE
 
@@ -194,6 +205,87 @@ STATIC FUNCTION DespacharAcao( pDb, cAcao )
 
    RETURN NIL
 
+STATIC FUNCTION CmdBackup()
+
+   LOCAL hRes := AdminBackup( ConexaoDb(), NIL )
+
+   Escrever( hRes[ "mensagem" ] )
+
+   RETURN iif( hRes[ "ok" ], SAIDA_OK, SAIDA_BANCO )
+
+STATIC FUNCTION CmdDump( cArquivo )
+
+   LOCAL hRes := AdminDump( ConexaoDb(), cArquivo )
+
+   Escrever( hRes[ "mensagem" ] )
+
+   RETURN iif( hRes[ "ok" ], SAIDA_OK, SAIDA_BANCO )
+
+STATIC FUNCTION CmdVerificar()
+
+   LOCAL aRes := AdminVerificar( ConexaoDb() ), i, lOk := .T.
+
+   Escrever( "verificação de " + ConexaoArquivo() )
+   Escrever( "" )
+   FOR i := 1 TO Len( aRes )
+      Escrever( "  " + iif( aRes[ i ][ "ok" ], "ok   ", "FALHA " ) + ;
+                PadR( aRes[ i ][ "item" ], 22 ) + aRes[ i ][ "valor" ] )
+      IF !aRes[ i ][ "ok" ]
+         lOk := .F.
+      ENDIF
+   NEXT
+
+   RETURN iif( lOk, SAIDA_OK, SAIDA_BANCO )
+
+/*
+ * D-15 — a purga é deliberada e conservadora: exige backup, recusa purgar
+ * registro referenciado e explica o que reteve. --simular mostra sem apagar.
+ */
+STATIC FUNCTION CmdPurgar( lSimular )
+
+   LOCAL hRes, i
+
+   hRes := AdminPurgar( ConexaoDb(), lSimular, ConexaoArquivo() )
+
+   IF !hRes[ "ok" ]
+      Escrever( hRes[ "mensagem" ] )
+      RETURN SAIDA_BANCO
+   ENDIF
+
+   IF hRes[ "backup" ] != NIL
+      Escrever( "backup obrigatório: " + hRes[ "backup" ] )
+   ENDIF
+   Escrever( iif( lSimular, "SIMULAÇÃO — nada foi apagado", "" ) )
+   Escrever( "" )
+   Escrever( hb_ntos( Len( hRes[ "purgados" ] ) ) + " registro(s) " + ;
+             iif( lSimular, "seriam purgados", "purgados" ) + ":" )
+   FOR i := 1 TO Len( hRes[ "purgados" ] )
+      Escrever( "   " + PadR( hRes[ "purgados" ][ i ][ "rotulo" ], 22 ) + ;
+                hb_ValToStr( hRes[ "purgados" ][ i ][ "id" ] ) )
+   NEXT
+
+   IF Len( hRes[ "retidos" ] ) > 0
+      Escrever( "" )
+      Escrever( hb_ntos( Len( hRes[ "retidos" ] ) ) + " retido(s) por dependência:" )
+      FOR i := 1 TO Len( hRes[ "retidos" ] )
+         Escrever( "   " + PadR( hRes[ "retidos" ][ i ][ "rotulo" ], 22 ) + ;
+                   PadR( hb_ValToStr( hRes[ "retidos" ][ i ][ "id" ] ), 6 ) + ;
+                   Left( hRes[ "retidos" ][ i ][ "motivo" ], 40 ) )
+      NEXT
+   ENDIF
+
+   RETURN SAIDA_OK
+
+STATIC FUNCTION CmdRestore( hArg )
+
+   LOCAL hConf := ConfigCarregar( hArg[ "config" ] ), cBanco, hRes
+
+   cBanco := iif( Empty( hArg[ "banco" ] ), hConf[ "banco" ], hArg[ "banco" ] )
+   hRes := AdminRestore( hArg[ "restore" ], cBanco )
+   Escrever( hRes[ "mensagem" ] )
+
+   RETURN iif( hRes[ "ok" ], SAIDA_OK, SAIDA_BANCO )
+
 STATIC FUNCTION Estado()
 
    LOCAL pDb := ConexaoDb(), lMig
@@ -255,7 +347,9 @@ STATIC FUNCTION Argumentos( aArgs )
    LOCAL hArg, i, cArg
 
    hArg := { "config" => NIL, "banco" => NIL, "versao" => .F., ;
-             "config_mostrar" => .F., "estado" => .F., "erro" => NIL }
+             "config_mostrar" => .F., "estado" => .F., "erro" => NIL, ;
+             "backup" => .F., "dump" => NIL, "restore" => NIL, ;
+             "verificar" => .F., "purgar" => .F., "simular" => .F. }
 
    i := 1
    DO WHILE i <= Len( aArgs )
@@ -278,6 +372,24 @@ STATIC FUNCTION Argumentos( aArgs )
       CASE cArg == "--versao"         ; hArg[ "versao" ] := .T.
       CASE cArg == "--config-mostrar" ; hArg[ "config_mostrar" ] := .T.
       CASE cArg == "--estado"         ; hArg[ "estado" ] := .T.
+      CASE cArg == "--backup"         ; hArg[ "backup" ] := .T.
+      CASE cArg == "--verificar"      ; hArg[ "verificar" ] := .T.
+      CASE cArg == "--purgar"         ; hArg[ "purgar" ] := .T.
+      CASE cArg == "--simular"        ; hArg[ "simular" ] := .T.
+      CASE cArg == "--dump"
+         i++
+         IF i > Len( aArgs )
+            hArg[ "erro" ] := "faltou o arquivo de --dump"
+            RETURN hArg
+         ENDIF
+         hArg[ "dump" ] := aArgs[ i ]
+      CASE cArg == "--restore"
+         i++
+         IF i > Len( aArgs )
+            hArg[ "erro" ] := "faltou o arquivo de --restore"
+            RETURN hArg
+         ENDIF
+         hArg[ "restore" ] := aArgs[ i ]
       CASE cArg == "--ajuda" .OR. cArg == "-h"
          Uso()
          hArg[ "versao" ] := .T.
@@ -298,6 +410,12 @@ STATIC PROCEDURE Uso()
    Escrever( "  --estado             estado do ambiente e do banco" )
    Escrever( "  --config-mostrar     configuração efetiva e sua origem" )
    Escrever( "  --versao             versão e ambiente" )
+   Escrever( "" )
+   Escrever( "  --backup             cópia física do banco (backup_dir)" )
+   Escrever( "  --dump <arquivo>     cópia lógica em SQL, versionável" )
+   Escrever( "  --restore <arquivo>  restaura; confere o backup antes e guarda o atual" )
+   Escrever( "  --verificar          integridade, chaves estrangeiras e contagens" )
+   Escrever( "  --purgar [--simular] apaga definitivamente os excluídos (exige backup)" )
    RETURN
 
 /* hb_ValToStr() de numérico vem preenchido à esquerda; aqui interessa o valor. */
