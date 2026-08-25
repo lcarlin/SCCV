@@ -13,7 +13,7 @@ em CA-Clipper Summer '87 / DOS (1994), para **Harbour + SQLite + Linux**.
 | **D — Migração DBF → SQLite** | ✅ concluída — `make migrate` · 222 registros |
 | **E — Testes de migração** | ✅ concluída — 892 campos, 0 divergências |
 | **F — Infraestrutura Harbour** | ✅ concluída — `bin/sccv` sobe e se apresenta |
-| **G — Implementação dos módulos** | 🔄 ondas 1–4 de 9 — 9 de 19 destinos do menu |
+| **G — Implementação dos módulos** | 🔄 ondas 1–5 de 9 — 12 de 19 destinos do menu |
 | H–J — Validações, regressão, auditoria | não iniciadas |
 
 A migração está pronta e verificada — 185 registros lidos, 222 gravados, 892

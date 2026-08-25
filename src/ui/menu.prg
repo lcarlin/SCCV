@@ -36,9 +36,9 @@ FUNCTION MenuDefinicao()
          { "titulo" => "Consulta"  , "acao" => "fornecedor.consulta"   }, ;
          { "titulo" => "Relatório" , "acao" => "fornecedor.relatorio"  } } }, ;
       { "titulo" => "Serviços", "coluna" => 49, "itens" => { ;
-         { "titulo" => "Venda de peças"   , "acao" => NIL }, ;
-         { "titulo" => "Reparo de autos"  , "acao" => NIL }, ;
-         { "titulo" => "Pronta entrega"   , "acao" => NIL }, ;
+         { "titulo" => "Venda de peças"   , "acao" => "venda.pecas"  }, ;
+         { "titulo" => "Reparo de autos"  , "acao" => "venda.reparo"  }, ;
+         { "titulo" => "Pronta entrega"   , "acao" => "venda.pronta"  }, ;
          { "titulo" => "Consórcio"        , "acao" => NIL }, ;
          { "titulo" => "Comissões"        , "acao" => NIL } } }, ;
       { "titulo" => "Estoques", "coluna" => 63, "itens" => { ;

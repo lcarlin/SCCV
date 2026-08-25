@@ -100,6 +100,20 @@ FUNCTION TransDesfazer( pDb )
  * Executa bBloco dentro de uma transação, confirmando no sucesso e desfazendo
  * em qualquer erro. É a forma preferida: não há caminho de saída que esqueça
  * o rollback.
+ *
+ * CONTRATO DO BLOCO
+ * -----------------
+ *   devolve NIL ou um número  → sucesso, a transação é confirmada
+ *   devolve um TEXTO          → falha, a transação é DESFEITA e o texto vira
+ *                               a mensagem de erro
+ *
+ * A segunda forma existe porque a primeira versão só desfazia quando havia
+ * exceção do Harbour. Um bloco que detectava o problema por conta própria e
+ * devolvia a mensagem — "estoque insuficiente", por exemplo — era tratado como
+ * sucesso, e a transação CONFIRMAVA o trabalho parcial. Foi assim que uma venda
+ * de veículo ficou gravada depois de a baixa de estoque ter falhado: o
+ * cabeçalho persistia, o estoque não mudava, e a função devolvia erro. O pior
+ * dos dois mundos.
  */
 FUNCTION TransExecutar( pDb, bBloco, cOperacao )
 
@@ -114,6 +128,12 @@ FUNCTION TransExecutar( pDb, bBloco, cOperacao )
                                                    TransDesfazer( pDb ) } )
    IF !hRes[ "ok" ]
       RETURN hRes
+   ENDIF
+
+   /* o bloco relatou falha por retorno: desfaz e propaga a mensagem */
+   IF ValType( hRes[ "valor" ] ) == "C"
+      TransDesfazer( pDb )
+      RETURN { "ok" => .F., "valor" => NIL, "mensagem" => hRes[ "valor" ] }
    ENDIF
 
    IF !TransConfirmar( pDb )

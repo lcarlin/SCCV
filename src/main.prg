@@ -128,7 +128,8 @@ STATIC FUNCTION AcaoImplementada( cAcao )
                    "funcionario.manutencao", "funcionario.consulta", ;
                    "fornecedor.manutencao", "fornecedor.consulta", ;
                    "modelo.manutencao", ;
-                   "peca.manutencao", "almoxarifado.manutencao" }, ;
+                   "peca.manutencao", "almoxarifado.manutencao", ;
+                   "venda.pecas", "venda.reparo", "venda.pronta" }, ;
                  {| x | x == cAcao } ) > 0
 
 STATIC FUNCTION Despachar( cAcao )
@@ -163,6 +164,12 @@ STATIC FUNCTION DespacharAcao( pDb, cAcao )
       CadastroManutencao( pDb, PecaDescritor() )
    CASE cAcao == "almoxarifado.manutencao"
       CadastroManutencao( pDb, AlmoxarifadoDescritor() )
+   CASE cAcao == "venda.pecas"
+      MovimentoVendaPeca( pDb, "BALCAO" )
+   CASE cAcao == "venda.reparo"
+      MovimentoVendaPeca( pDb, "REPARO" )
+   CASE cAcao == "venda.pronta"
+      MovimentoProntaEntrega( pDb )
    OTHERWISE
       Mensagem( "Destino '" + cAcao + "' ainda não implementado" )
    ENDCASE

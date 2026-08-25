@@ -398,7 +398,7 @@ Ordem obrigatória, **por dependência** (`07` §2.2):
 | **2** ✅ | Cadastros nível 0: **cliente**, **funcionário**, **fornecedor**, **modelo_veiculo** (manutenção + consulta) | 1 |
 | **3** ✅ | Cadastros nível 1: **peça**, **almoxarifado** (manutenção + consulta) | 2 |
 | **4** ✅ | `services/comissao.prg` · `services/estoque.prg` | 2, 3 |
-| **5** | Movimento: **venda de peças (balcão)**, **reparo**, **pronta entrega** | 3, 4 |
+| **5** ✅ | Movimento: **venda de peças (balcão)**, **reparo**, **pronta entrega** | 3, 4 |
 | **6** | **Consórcio**: adesão, fechamento de grupo, baixa de prestações, sorteio | 2, 4 |
 | **7** | Relatórios R-01..R-10 | 2–6 |
 | **8** | Gráficos R-11, R-12 (barras + CSV) | 5 |
@@ -546,6 +546,52 @@ regras RN-014, RN-015, RN-017 e RN-018 — que são de **consórcio**, não de
 estoque. As regras de estoque são RN-028, RN-029, RN-034 e RN-035, e são essas
 que a onda implementou. As de consórcio ficam para a onda 6.
 
+#### Onda 5 — concluída em 2026-08-25
+
+Movimento: venda de peças (balcão), reparo e pronta entrega. 55 asserções em
+`tests/integration/testa_venda.prg`. **12 dos 19 destinos do menu ligados.**
+
+É a onda que faz os serviços da onda 4 saírem do laboratório: cada venda gravada
+baixa o estoque certo e credita a comissão ao funcionário certo, dentro de uma
+transação.
+
+- **D-17 realizado.** A venda passa a ter cabeçalho e itens. O total mora no
+  cabeçalho e é a soma dos subtotais, calculada — nunca acumulada numa variável
+  que só chega ao disco no último item, que é o que produzia os 28 registros com
+  total zero no legado (RN-027).
+- **D-06 corrigido.** Depois do cadastro de cliente em linha, a busca é
+  REFEITA. No legado o fluxo seguia sem refazer o `SEEK`, lendo o nome de uma
+  área que `CVMTCLI` havia fechado.
+- **Q-02 respondida para vendas novas.** O legado não distinguia balcão de
+  reparo — ambos caíam em `CVPECAS` sem marca, e por isso as 37 vendas migradas
+  ficaram com `origem = 'INDETERMINADO'`. A venda nova declara sua origem.
+- **D-13 preservado.** O reparo grava a venda e credita comissão, mas **não**
+  baixa estoque. A condição está num lugar só, explícita.
+- **Saldo considera o que já está na venda.** Três itens de 5 unidades da mesma
+  peça, num estoque de 10, passariam individualmente e estourariam na gravação.
+  O legado não tinha esse problema porque gravava item a item.
+
+**Defeito encontrado e corrigido: `TransExecutar` confirmava trabalho parcial.**
+
+A função só desfazia a transação quando havia exceção do Harbour. Um bloco que
+detectasse o problema por conta própria e devolvesse a mensagem — "estoque
+insuficiente", por exemplo — era tratado como sucesso, e a transação
+**confirmava**. Foi assim que uma venda de veículo ficou gravada depois de a
+baixa de estoque ter falhado: o cabeçalho persistia, o estoque não mudava, e a
+função devolvia erro. O pior dos dois mundos.
+
+O contrato do bloco passou a ser explícito: devolver `NIL` ou número é sucesso;
+devolver **texto** é falha, e a transação é desfeita. `ModeloGravar` e
+`ModeloExcluir` foram ajustados ao mesmo contrato, onde a fragilidade era
+latente. Coberto por teste em `testa_infra`.
+
+**Nota de build:** `models/venda.prg` e `services/venda.prg` colidiam — o
+`hbmk2` nomeia os objetos pelo nome BASE do fonte, então dois arquivos com o
+mesmo nome em diretórios diferentes geram o mesmo `.o` e um sobrescreve o outro,
+com erro de símbolo indefinido no link. Nomes de fonte precisam ser únicos no
+projeto inteiro. O modelo foi dividido em `venda_peca.prg` e
+`venda_veiculo.prg`, o que também alinha com a estrutura de §2.
+
 **Limite declarado:** os fluxos interativos (navegação, edição em tela) **não têm
 teste automatizado**. O que é testável foi separado do desenho e está coberto; o
 desenho depende de verificação à mão. Injeção por pseudo-terminal se mostrou não
@@ -612,19 +658,19 @@ Estado inicial. `Status`: `Não iniciado` · `Em implementação` · `Implementa
 
 | Funcionalidade | Clipper | Harbour | SQLite | Status |
 |---|---|---|---|---|
-| Venda de peças (balcão) | OK | — | — | Não iniciado |
-| Venda de peças — alerta de estoque mínimo | OK | OK | OK | Em implementação — serviço pronto (onda 4) |
-| Venda de peças — baixa de estoque | OK | OK | OK | Em implementação — serviço pronto (onda 4) |
-| Venda de peças — cadastro de cliente em linha | Defeituoso (D-06) | — | — | Não iniciado |
-| Venda de peças — subtotal e total | Parcial (D-17) | — | — | Não iniciado |
-| Reparo de autos — grade de itens | OK | — | — | Não iniciado |
+| Venda de peças (balcão) | OK | OK | OK | **Concluído** |
+| Venda de peças — alerta de estoque mínimo | OK | OK | OK | **Concluído** — RN-028 preservada |
+| Venda de peças — baixa de estoque | OK | OK | OK | **Concluído** |
+| Venda de peças — cadastro de cliente em linha | Defeituoso (D-06) | OK | OK | **Concluído** — sem D-06 |
+| Venda de peças — subtotal e total | Parcial (D-17) | OK | OK | **Concluído** — cabeçalho + itens |
+| Reparo de autos — grade de itens | OK | OK | OK | **Concluído** |
 | Reparo — baixa de estoque | **Ausente** (D-13) | — | — | Preservado ausente — **Q-12 aberta** |
-| Pronta entrega — venda | OK | — | — | Não iniciado |
-| Pronta entrega — baixa de frota | Defeituoso (D-08) | OK | OK | Em implementação — serviço pronto, sem D-08 |
-| Pronta entrega — aviso de último veículo | OK | OK | OK | Em implementação — serviço pronto (RN-035) |
-| Comissão — venda de peças | **Indefinido** (D-05) | OK | OK | Em implementação — fórmula literal preservada, **Q-10 aberta** |
-| Comissão — reparo | **Indefinido** (D-05) | OK | OK | Em implementação — mesma fórmula, **Q-10 aberta** |
-| Comissão — pronta entrega (1,5%) | Defeituoso (D-07) | OK | OK | Em implementação — serviço pronto, sem D-07 |
+| Pronta entrega — venda | OK | OK | OK | **Concluído** |
+| Pronta entrega — baixa de frota | Defeituoso (D-08) | OK | OK | **Concluído** — sem D-08 |
+| Pronta entrega — aviso de último veículo | OK | OK | OK | **Concluído** — RN-035 |
+| Comissão — venda de peças | **Indefinido** (D-05) | OK | OK | **Concluído** — fórmula literal, **Q-10 aberta** |
+| Comissão — reparo | **Indefinido** (D-05) | OK | OK | **Concluído** — mesma fórmula, **Q-10 aberta** |
+| Comissão — pronta entrega (1,5%) | Defeituoso (D-07) | OK | OK | **Concluído** — sem D-07 |
 | Comissão — consórcio (0,15%) | OK | OK | OK | Em implementação — serviço pronto (onda 4) |
 
 ### 5.3 Consórcio

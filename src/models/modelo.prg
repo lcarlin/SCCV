@@ -135,15 +135,13 @@ FUNCTION ModeloGravar( pDb, hDesc, hValores, lNovo )
       AAdd( aParams, hValores[ hDesc[ "chave" ] ] )
    ENDIF
 
-   hRes := TransExecutar( pDb, {| | SqlExecBind( pDb, cSql, aParams ) }, ;
-                          iif( lNovo, "incluir o registro", "alterar o registro" ) )
+   /* o bloco devolve texto em caso de falha, e TransExecutar desfaz */
+   hRes := TransExecutar( pDb, ;
+      {| | iif( SqlExecBind( pDb, cSql, aParams ) == 0, NIL, ;
+                "Não foi possível gravar: " + SqlErro( pDb ) ) }, ;
+      iif( lNovo, "incluir o registro", "alterar o registro" ) )
    IF !hRes[ "ok" ]
       RETURN { "ok" => .F., "mensagem" => hRes[ "mensagem" ], "validacao" => hV }
-   ENDIF
-   IF hRes[ "valor" ] != 0
-      RETURN { "ok" => .F., ;
-               "mensagem" => "Não foi possível gravar: " + SqlErro( pDb ), ;
-               "validacao" => hV }
    ENDIF
 
    LogInfo( iif( lNovo, "incluído", "alterado" ) + " em " + hDesc[ "tabela" ], ;
@@ -173,8 +171,9 @@ FUNCTION ModeloExcluir( pDb, hDesc, nChave )
    ENDIF
 
    hRes := TransExecutar( pDb, ;
-      {| | SqlExecBind( pDb, "UPDATE " + hDesc[ "tabela" ] + " SET excluido = 1" + ;
-                             " WHERE " + hDesc[ "chave" ] + " = ?", { nChave } ) }, ;
+      {| | iif( SqlExecBind( pDb, "UPDATE " + hDesc[ "tabela" ] + " SET excluido = 1" + ;
+                                  " WHERE " + hDesc[ "chave" ] + " = ?", { nChave } ) == 0, ;
+                NIL, "Não foi possível excluir: " + SqlErro( pDb ) ) }, ;
       "excluir o registro" )
    IF !hRes[ "ok" ]
       RETURN { "ok" => .F., "mensagem" => hRes[ "mensagem" ] }

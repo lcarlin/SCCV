@@ -327,6 +327,21 @@ STATIC PROCEDURE TestaTransacao()
    Vale( "TransExecutar confirma no sucesso", hR[ "ok" ], .T. )
    Vale( "e o registro ficou", SqlEscalar( pDb, "SELECT count(*) FROM t WHERE id = 20" ), 1 )
 
+   /*
+    * O bloco pode relatar falha por RETORNO, sem exceção. Antes isso era
+    * tratado como sucesso e a transação CONFIRMAVA o trabalho parcial — foi
+    * assim que uma venda de veículo ficou gravada depois de a baixa de estoque
+    * ter falhado. Texto devolvido = falha = rollback.
+    */
+   hR := TransExecutar( pDb, ;
+      {| | SqlExecBind( pDb, "INSERT INTO t (id) VALUES (?)", { 30 } ), ;
+           "estoque insuficiente" }, "gravar" )
+   Vale( "bloco que devolve texto é falha", hR[ "ok" ], .F. )
+   Vale( "com a mensagem do bloco", hR[ "mensagem" ], "estoque insuficiente" )
+   Vale( "e o trabalho parcial foi DESFEITO", ;
+         SqlEscalar( pDb, "SELECT count(*) FROM t WHERE id = 30" ), 0 )
+   Vale( "sem transação pendente", TransNivel(), 0 )
+
    ConexaoFechar()
 
    RETURN
