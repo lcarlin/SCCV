@@ -301,6 +301,23 @@ export PATH=/opt/harbour/bin:$PATH               # acrescentado ao ~/.bashrc
 `contrib/hbsqlit3` é compilado junto: `/opt/harbour/lib/harbour/libhbsqlit3.a`.
 Linkedição: `hbmk2 <fonte>.prg -lhbsqlit3 -lsqlite3`.
 
+**Atenção — codepage (encontrado em 2026-08-25):** o `hbsqlit3` **traduz** os
+textos da codepage da aplicação para UTF-8 ao gravar, e de volta ao ler. A
+codepage padrão do Harbour é `EN` (família CP437). Como os textos deste projeto
+**já são UTF-8**, essa tradução os codifica **duas vezes**: os bytes `C2 BA` de
+`º` são lidos como os caracteres CP437 `┬` e `║` e regravados como
+`E2 94 AC E2 95 91`.
+
+O estrago é invisível de dentro do sistema, porque a conversão é simétrica: a
+leitura desfaz o que a escrita fez. Só quem lê o banco por fora — `sqlite3`,
+Python, qualquer outra ferramenta — enxerga o texto corrompido.
+
+`SqlAbrir()` garante `hb_cdpSelect( "UTF8" )` antes de qualquer acesso. A
+garantia vive na camada de SQL, e não em cada programa, porque quem esquecesse
+corromperia dados sem receber erro nenhum. O teste de regressão não compara
+strings — conta bytes com `length(CAST(col AS BLOB))`, que é calculado pelo
+SQLite e não passa pela tradução.
+
 **Atenção:** o `hbsqlit3` não exporta `sqlite3_close()` — o banco é fechado pelo
 destrutor do ponteiro (basta descartar a referência).
 

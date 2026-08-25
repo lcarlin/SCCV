@@ -18,6 +18,8 @@
 #require "hbsqlit3"
 #include "hbsqlit3.ch"
 
+REQUEST HB_CODEPAGE_UTF8
+
 /* Última mensagem de erro capturada ANTES do finalize (ver SqlExecBind).
    STATIC de módulo precisa vir antes de qualquer função. */
 STATIC s_cUltimoErro := ""
@@ -28,6 +30,28 @@ FUNCTION SqlAbrir( cArquivo, lCriar )
    LOCAL pDb
 
    hb_default( @lCriar, .T. )
+
+   /*
+    * A codepage da aplicação precisa ser UTF-8 antes de qualquer acesso ao
+    * banco, e a garantia vive AQUI porque é esta camada que tem o contrato com
+    * o hbsqlit3. Deixar cada programa lembrar de configurá-la seria uma
+    * armadilha: quem esquecesse corromperia os dados sem receber erro nenhum.
+    *
+    * O hbsqlit3 traduz da codepage da aplicação para UTF-8 ao gravar e de volta
+    * ao ler. O padrão do Harbour é "EN" (família CP437). Como nossos textos JÁ
+    * são UTF-8, essa tradução os codifica DUAS vezes: os bytes C2 BA de "º"
+    * viram os caracteres CP437 "┬" e "║" e são regravados como E2 94 AC E2 95 91.
+    *
+    * O estrago passa despercebido de dentro do sistema, porque a conversão é
+    * simétrica — a leitura desfaz o que a escrita fez, e até a comparação campo
+    * a campo da FASE E via o valor certo. Só quem lê o banco por fora (sqlite3,
+    * Python, qualquer outra ferramenta) enxerga o texto corrompido. E um banco
+    * que só o nosso próprio programa lê corretamente não é um banco UTF-8, que
+    * é exatamente o que este projeto se propôs a entregar.
+    */
+   IF !( hb_cdpSelect() == "UTF8" )
+      hb_cdpSelect( "UTF8" )
+   ENDIF
 
    pDb := sqlite3_open( cArquivo, lCriar )
    IF pDb == NIL

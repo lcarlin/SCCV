@@ -10,6 +10,8 @@
 
 #require "hbsqlit3"
 
+REQUEST HB_CODEPAGE_UTF8
+
 STATIC s_nOk := 0
 STATIC s_nFalhas := 0
 
@@ -228,11 +230,44 @@ STATIC PROCEDURE TestaConexao()
          At( "parâmetro 2", SqlErro( pDb ) ) > 0, .T. )
    Vale( "e a execução continua", 1 + 1, 2 )
 
+   TestaUtf8( pDb )
+
    aL := SqlLinhas( pDb, "SELECT id, nome FROM t ORDER BY id" )
    Vale( "SqlLinhas devolve as linhas", Len( aL ), 5 )
 
    ConexaoFechar()
    Vale( "fechar limpa a conexão", ConexaoDb(), NIL )
+
+   RETURN
+
+/*
+ * O texto gravado tem de ser UTF-8 DE VERDADE no arquivo, não só do ponto de
+ * vista do Harbour.
+ *
+ * O hbsqlit3 traduz da codepage da aplicação para UTF-8 ao gravar e de volta ao
+ * ler. Com a codepage padrão ("EN"), textos que já são UTF-8 são codificados
+ * duas vezes — e como a conversão é simétrica, TODA leitura feita por este
+ * programa devolve o valor certo. O erro é invisível de dentro.
+ *
+ * Por isso a asserção não compara strings: conta BYTES com length(CAST(... AS
+ * BLOB)), que é calculado pelo SQLite e não passa pela tradução. "Nº12" tem 5
+ * bytes em UTF-8; duplamente codificado teria 8.
+ */
+STATIC PROCEDURE TestaUtf8( pDb )
+
+   LOCAL cTexto := "N" + hb_BChar( 194 ) + hb_BChar( 186 ) + "12"   // Nº12 em UTF-8
+
+   ? "== F.2 — o texto gravado é UTF-8 no arquivo =="
+
+   Vale( "codepage da aplicação é UTF8", hb_cdpSelect(), "UTF8" )
+   SqlExec( pDb, "CREATE TABLE utf8_t (s TEXT)" )
+   Vale( "grava texto acentuado", ;
+         SqlExecBind( pDb, "INSERT INTO utf8_t (s) VALUES (?)", { cTexto } ), 0 )
+   Vale( "são 5 bytes no arquivo, não 8 (dupla codificação)", ;
+         SqlEscalar( pDb, "SELECT length(CAST(s AS BLOB)) FROM utf8_t" ), 5 )
+   Vale( "e 4 caracteres para o SQLite", ;
+         SqlEscalar( pDb, "SELECT length(s) FROM utf8_t" ), 4 )
+   Vale( "o valor volta íntegro", SqlEscalar( pDb, "SELECT s FROM utf8_t" ), cTexto )
 
    RETURN
 
