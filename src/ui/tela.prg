@@ -19,6 +19,7 @@
 
 #include "inkey.ch"
 #include "setcurs.ch"
+#include "box.ch"
 
 REQUEST HB_CODEPAGE_UTF8
 
